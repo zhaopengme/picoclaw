@@ -557,9 +557,7 @@ PicoClaw lưu trữ dữ liệu trong workspace đã cấu hình (mặc định:
 ├── AGENTS.md         # Hướng dẫn hành vi Agent
 ├── HEARTBEAT.md      # Prompt tác vụ định kỳ (kiểm tra mỗi 30 phút)
 ├── IDENTITY.md       # Danh tính Agent
-├── SOUL.md           # Tâm hồn/Tính cách Agent
-├── TOOLS.md          # Mô tả công cụ
-└── USER.md           # Tùy chọn người dùng
+└── SOUL.md           # Tâm hồn/Tính cách Agent
 ```
 
 ### 🔒 Hộp cát bảo mật (Security Sandbox)

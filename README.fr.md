@@ -576,9 +576,7 @@ PicoClaw stocke les données dans votre workspace configuré (par défaut : `~/.
 ├── AGENTS.md         # Guide de comportement de l'Agent
 ├── HEARTBEAT.md      # Invites de tâches périodiques (vérifiées toutes les 30 min)
 ├── IDENTITY.md       # Identité de l'Agent
-├── SOUL.md           # Âme de l'Agent
-├── TOOLS.md          # Description des outils
-└── USER.md           # Préférences utilisateur
+└── SOUL.md           # Âme de l'Agent
 ```
 
 ### 🔒 Bac à Sable de Sécurité

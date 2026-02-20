@@ -583,9 +583,7 @@ PicoClaw stores data in your configured workspace (default: `~/.picoclaw/workspa
 ├── AGENTS.md         # Agent behavior guide
 ├── HEARTBEAT.md      # Periodic task prompts (checked every 30 min)
 ├── IDENTITY.md       # Agent identity
-├── SOUL.md           # Agent soul
-├── TOOLS.md          # Tool descriptions
-└── USER.md           # User preferences
+└── SOUL.md           # Agent soul
 ```
 
 ### 🔒 Security Sandbox
