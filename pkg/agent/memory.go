@@ -7,34 +7,37 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
 // MemoryStore manages persistent memory for the agent.
-// - Long-term memory: memory/MEMORY.md
+// - Long-term memory: memory/profile.json
 // - Daily notes: memory/YYYYMM/YYYYMMDD.md
 type MemoryStore struct {
-	workspace  string
-	memoryDir  string
-	memoryFile string
+	mu          sync.RWMutex
+	workspace   string
+	memoryDir   string
+	profileFile string
 }
 
 // NewMemoryStore creates a new MemoryStore with the given workspace path.
 // It ensures the memory directory exists.
 func NewMemoryStore(workspace string) *MemoryStore {
 	memoryDir := filepath.Join(workspace, "memory")
-	memoryFile := filepath.Join(memoryDir, "MEMORY.md")
+	profileFile := filepath.Join(memoryDir, "profile.json")
 
 	// Ensure memory directory exists
 	os.MkdirAll(memoryDir, 0755)
 
 	return &MemoryStore{
-		workspace:  workspace,
-		memoryDir:  memoryDir,
-		memoryFile: memoryFile,
+		workspace:   workspace,
+		memoryDir:   memoryDir,
+		profileFile: profileFile,
 	}
 }
 
@@ -46,18 +49,61 @@ func (ms *MemoryStore) getTodayFile() string {
 	return filePath
 }
 
-// ReadLongTerm reads the long-term memory (MEMORY.md).
-// Returns empty string if the file doesn't exist.
-func (ms *MemoryStore) ReadLongTerm() string {
-	if data, err := os.ReadFile(ms.memoryFile); err == nil {
-		return string(data)
+// ReadProfile reads the long-term profile JSON safely.
+func (ms *MemoryStore) ReadProfile() map[string]string {
+	ms.mu.RLock()
+	defer ms.mu.RUnlock()
+
+	profile := make(map[string]string)
+	data, err := os.ReadFile(ms.profileFile)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &profile)
 	}
-	return ""
+	return profile
 }
 
-// WriteLongTerm writes content to the long-term memory file (MEMORY.md).
-func (ms *MemoryStore) WriteLongTerm(content string) error {
-	return os.WriteFile(ms.memoryFile, []byte(content), 0644)
+// WriteProfileKey safely updates or adds a key in the profile.
+func (ms *MemoryStore) WriteProfileKey(key, value string) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
+	profile := make(map[string]string)
+	data, err := os.ReadFile(ms.profileFile)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &profile)
+	}
+
+	profile[key] = value
+
+	newData, err := json.MarshalIndent(profile, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(ms.profileFile, newData, 0644)
+}
+
+// DeleteProfileKey safely removes a key from the profile.
+func (ms *MemoryStore) DeleteProfileKey(key string) error {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
+
+	profile := make(map[string]string)
+	data, err := os.ReadFile(ms.profileFile)
+	if err == nil && len(data) > 0 {
+		_ = json.Unmarshal(data, &profile)
+	}
+
+	if _, exists := profile[key]; !exists {
+		return nil // Key doesn't exist, nothing to do
+	}
+
+	delete(profile, key)
+
+	newData, err := json.MarshalIndent(profile, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(ms.profileFile, newData, 0644)
 }
 
 // ReadToday reads today's daily note.
@@ -129,14 +175,17 @@ func (ms *MemoryStore) GetRecentDailyNotes(days int) string {
 }
 
 // GetMemoryContext returns formatted memory context for the agent prompt.
-// Includes long-term memory and recent daily notes.
 func (ms *MemoryStore) GetMemoryContext() string {
 	var parts []string
 
-	// Long-term memory
-	longTerm := ms.ReadLongTerm()
-	if longTerm != "" {
-		parts = append(parts, "## Long-term Memory\n\n"+longTerm)
+	// Long-term memory (Profile)
+	profile := ms.ReadProfile()
+	if len(profile) > 0 {
+		var profileStr string
+		for k, v := range profile {
+			profileStr += fmt.Sprintf("- **%s**: %s\n", k, v)
+		}
+		parts = append(parts, "## Core Profile (Facts & Preferences)\n\n"+profileStr)
 	}
 
 	// Recent daily notes (last 3 days)
@@ -149,7 +198,6 @@ func (ms *MemoryStore) GetMemoryContext() string {
 		return ""
 	}
 
-	// Join parts with separator
 	var result string
 	for i, part := range parts {
 		if i > 0 {
