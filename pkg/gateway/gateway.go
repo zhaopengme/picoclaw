@@ -13,7 +13,7 @@ import (
 type CommandGateway struct {
 	bus            bus.Broker
 	channelManager *channels.Manager
-	agentBus       bus.Broker // for forwarding to agent
+	agentBus       bus.Broker           // for forwarding to agent
 	agentRegistry  *agent.AgentRegistry // to fetch models
 }
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/zhaopengme/mobaiclaw/pkg/skills"
 	"github.com/stretchr/testify/assert"
+	"github.com/zhaopengme/mobaiclaw/pkg/skills"
 )
 
 func TestFindSkillsToolName(t *testing.T) {

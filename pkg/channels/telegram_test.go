@@ -6,10 +6,10 @@ import (
 
 func TestParseCompositeChatID(t *testing.T) {
 	tests := []struct {
-		input       string
-		wantChatID  int64
+		input        string
+		wantChatID   int64
 		wantThreadID int
-		wantErr     bool
+		wantErr      bool
 	}{
 		{"12345", 12345, 0, false},
 		{"-1001234567:5", -1001234567, 5, false},

@@ -608,8 +608,8 @@ func TestRunDryRun(t *testing.T) {
 	os.WriteFile(filepath.Join(openclawHome, "openclaw.json"), data, 0644)
 
 	opts := Options{
-		DryRun:       true,
-		OpenClawHome: openclawHome,
+		DryRun:        true,
+		OpenClawHome:  openclawHome,
 		MobaiClawHome: mobaiClawHome,
 	}
 
@@ -663,8 +663,8 @@ func TestRunFullMigration(t *testing.T) {
 	os.WriteFile(filepath.Join(openclawHome, "openclaw.json"), data, 0644)
 
 	opts := Options{
-		Force:        true,
-		OpenClawHome: openclawHome,
+		Force:         true,
+		OpenClawHome:  openclawHome,
 		MobaiClawHome: mobaiClawHome,
 	}
 
@@ -729,7 +729,7 @@ func TestRunFullMigration(t *testing.T) {
 
 func TestRunOpenClawNotFound(t *testing.T) {
 	opts := Options{
-		OpenClawHome: "/nonexistent/path/to/openclaw",
+		OpenClawHome:  "/nonexistent/path/to/openclaw",
 		MobaiClawHome: t.TempDir(),
 	}
 
@@ -809,9 +809,9 @@ func TestRunConfigOnly(t *testing.T) {
 	os.WriteFile(filepath.Join(openclawHome, "openclaw.json"), data, 0644)
 
 	opts := Options{
-		Force:        true,
-		ConfigOnly:   true,
-		OpenClawHome: openclawHome,
+		Force:         true,
+		ConfigOnly:    true,
+		OpenClawHome:  openclawHome,
 		MobaiClawHome: mobaiClawHome,
 	}
 
@@ -852,7 +852,7 @@ func TestRunWorkspaceOnly(t *testing.T) {
 		Force:         true,
 		WorkspaceOnly: true,
 		OpenClawHome:  openclawHome,
-		MobaiClawHome:  mobaiClawHome,
+		MobaiClawHome: mobaiClawHome,
 	}
 
 	result, err := Run(opts)

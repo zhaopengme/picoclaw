@@ -15,10 +15,10 @@ import (
 	"github.com/zhaopengme/mobaiclaw/pkg/agent"
 	"github.com/zhaopengme/mobaiclaw/pkg/bus"
 	"github.com/zhaopengme/mobaiclaw/pkg/channels"
-	"github.com/zhaopengme/mobaiclaw/pkg/gateway"
 	"github.com/zhaopengme/mobaiclaw/pkg/config"
 	"github.com/zhaopengme/mobaiclaw/pkg/cron"
 	"github.com/zhaopengme/mobaiclaw/pkg/devices"
+	"github.com/zhaopengme/mobaiclaw/pkg/gateway"
 	"github.com/zhaopengme/mobaiclaw/pkg/health"
 	"github.com/zhaopengme/mobaiclaw/pkg/heartbeat"
 	"github.com/zhaopengme/mobaiclaw/pkg/logger"
@@ -111,7 +111,6 @@ func gatewayCmd() {
 		os.Exit(1)
 	}
 
-
 	var transcriber *voice.GroqTranscriber
 	if cfg.Providers.Groq.APIKey != "" {
 		transcriber = voice.NewGroqTranscriber(cfg.Providers.Groq.APIKey)
@@ -185,7 +184,6 @@ func gatewayCmd() {
 		}
 	}()
 	fmt.Printf("✓ Health endpoints available at http://%s:%d/health and /ready\n", cfg.Gateway.Host, cfg.Gateway.Port)
-
 
 	gw := gateway.NewCommandGateway(mainBus, agentBus, channelManager, agentLoop.GetRegistry())
 	go gw.Run(ctx)

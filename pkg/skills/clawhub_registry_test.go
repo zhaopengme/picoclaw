@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zhaopengme/mobaiclaw/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zhaopengme/mobaiclaw/pkg/utils"
 )
 
 func newTestRegistry(serverURL, authToken string) *ClawHubRegistry {

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/zhaopengme/mobaiclaw/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/zhaopengme/mobaiclaw/pkg/utils"
 )
 
 // mockRegistry is a test double implementing SkillRegistry.

@@ -29,13 +29,13 @@ import (
 )
 
 type AgentLoop struct {
-	bus            bus.Broker
-	cfg            *config.Config
-	registry       *AgentRegistry
-	state          *state.Manager
-	running        atomic.Bool
-	summarizing    sync.Map
-	fallback       *providers.FallbackChain
+	bus         bus.Broker
+	cfg         *config.Config
+	registry    *AgentRegistry
+	state       *state.Manager
+	running     atomic.Bool
+	summarizing sync.Map
+	fallback    *providers.FallbackChain
 }
 
 // processOptions configures how a message is processed
@@ -965,7 +965,6 @@ func (al *AgentLoop) estimateTokens(messages []providers.Message) int {
 	// 2.5 chars per token = totalChars * 2 / 5
 	return totalChars * 2 / 5
 }
-
 
 // extractPeer extracts the routing peer from inbound message metadata.
 func extractPeer(msg bus.InboundMessage) *routing.RoutePeer {

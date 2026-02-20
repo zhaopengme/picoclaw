@@ -28,7 +28,7 @@ type Options struct {
 	Force         bool
 	Refresh       bool
 	OpenClawHome  string
-	MobaiClawHome  string
+	MobaiClawHome string
 }
 
 type Action struct {
