@@ -211,3 +211,23 @@ func (ms *MemoryStore) GetMemoryContext() string {
 	}
 	return fmt.Sprintf("# Memory\n\n%s", result)
 }
+
+// MigrateLegacyUserMD checks for a legacy USER.md file and migrates it to the JSON profile.
+func (ms *MemoryStore) MigrateLegacyUserMD() error {
+	userMDPath := filepath.Join(ms.workspace, "USER.md")
+	data, err := os.ReadFile(userMDPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Nothing to migrate
+		}
+		return err
+	}
+
+	err = ms.WriteProfileKey("legacy_user_preferences", string(data))
+	if err != nil {
+		return err
+	}
+
+	bakPath := filepath.Join(ms.workspace, "USER.md.bak")
+	return os.Rename(userMDPath, bakPath)
+}

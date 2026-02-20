@@ -2,6 +2,7 @@ package agent
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -72,5 +73,33 @@ func TestProfileCorruptionProtection(t *testing.T) {
 		t.Errorf("Expected an error when deleting from a corrupted profile, got nil")
 	} else if !strings.Contains(err.Error(), "corrupted") {
 		t.Errorf("Expected corruption error message, got: %v", err)
+	}
+}
+
+func TestMigrateLegacyUserMD(t *testing.T) {
+	tempDir := t.TempDir()
+	userMDPath := filepath.Join(tempDir, "USER.md")
+	os.WriteFile(userMDPath, []byte("I like pizza"), 0644)
+
+	ms := NewMemoryStore(tempDir)
+	err := ms.MigrateLegacyUserMD()
+	if err != nil {
+		t.Fatalf("Migration failed: %v", err)
+	}
+
+	// Check profile
+	profile := ms.ReadProfile()
+	if profile["legacy_user_preferences"] != "I like pizza" {
+		t.Errorf("Expected profile to contain legacy prefs, got: %v", profile["legacy_user_preferences"])
+	}
+
+	// Check file renamed
+	if _, err := os.Stat(userMDPath); !os.IsNotExist(err) {
+		t.Errorf("USER.md should be renamed/deleted")
+	}
+
+	bakPath := filepath.Join(tempDir, "USER.md.bak")
+	if _, err := os.Stat(bakPath); err != nil {
+		t.Errorf("USER.md.bak should exist")
 	}
 }
