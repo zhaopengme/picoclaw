@@ -44,11 +44,11 @@ Ultra-lightweight personal AI assistant written in Go, inspired by nanobot.
 MIT License - Free and open source
 
 ## Repository
-https://github.com/zhaopengme/mobaiclaw
+https://github.com/sipeed/mobaiclaw
 
 ## Contact
-Issues: https://github.com/zhaopengme/mobaiclaw/issues
-Discussions: https://github.com/zhaopengme/mobaiclaw/discussions
+Issues: https://github.com/sipeed/mobaiclaw/issues
+Discussions: https://github.com/sipeed/mobaiclaw/discussions
 
 ---
 
