@@ -218,6 +218,13 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	}
 
 	chatID := message.Chat.ID
+	chatIDStr := fmt.Sprintf("%d", chatID)
+
+	// Support for Forum Topics (Threads)
+	if message.IsTopicMessage && message.MessageThreadID != 0 {
+		chatIDStr = fmt.Sprintf("%d:%d", chatID, message.MessageThreadID)
+	}
+
 	c.chatIDs[senderID] = chatID
 
 	content := ""
@@ -330,7 +337,14 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	})
 
 	// Thinking indicator
-	err := c.bot.SendChatAction(ctx, tu.ChatAction(tu.ID(chatID), telego.ChatActionTyping))
+	chatActionParams := &telego.SendChatActionParams{
+		ChatID: tu.ID(chatID),
+		Action: telego.ChatActionTyping,
+	}
+	if message.IsTopicMessage && message.MessageThreadID != 0 {
+		chatActionParams.MessageThreadID = message.MessageThreadID
+	}
+	err := c.bot.SendChatAction(ctx, chatActionParams)
 	if err != nil {
 		logger.ErrorCF("telegram", "Failed to send chat action", map[string]interface{}{
 			"error": err.Error(),
@@ -338,7 +352,6 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	}
 
 	// Stop any previous thinking animation
-	chatIDStr := fmt.Sprintf("%d", chatID)
 	if prevStop, ok := c.stopThinking.Load(chatIDStr); ok {
 		if cf, ok := prevStop.(*thinkingCancel); ok && cf != nil {
 			cf.Cancel()
@@ -349,7 +362,14 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	_, thinkCancel := context.WithTimeout(ctx, 5*time.Minute)
 	c.stopThinking.Store(chatIDStr, &thinkingCancel{fn: thinkCancel})
 
-	pMsg, err := c.bot.SendMessage(ctx, tu.Message(tu.ID(chatID), "Thinking... 💭"))
+	thinkingMsgParams := &telego.SendMessageParams{
+		ChatID: tu.ID(chatID),
+		Text:   "Thinking... 💭",
+	}
+	if message.IsTopicMessage && message.MessageThreadID != 0 {
+		thinkingMsgParams.MessageThreadID = message.MessageThreadID
+	}
+	pMsg, err := c.bot.SendMessage(ctx, thinkingMsgParams)
 	if err == nil {
 		pID := pMsg.MessageID
 		c.placeholders.Store(chatIDStr, pID)
@@ -371,8 +391,11 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		"peer_kind":  peerKind,
 		"peer_id":    peerID,
 	}
+	if message.IsTopicMessage && message.MessageThreadID != 0 {
+		metadata["thread_id"] = fmt.Sprintf("%d", message.MessageThreadID)
+	}
 
-	c.HandleMessage(fmt.Sprintf("%d", user.ID), fmt.Sprintf("%d", chatID), content, mediaPaths, metadata)
+	c.HandleMessage(fmt.Sprintf("%d", user.ID), chatIDStr, content, mediaPaths, metadata)
 	return nil
 }
 
