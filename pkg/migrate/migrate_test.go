@@ -411,8 +411,8 @@ func TestPlanWorkspaceMigration(t *testing.T) {
 		if copyCount != 3 {
 			t.Errorf("expected 3 copies, got %d", copyCount)
 		}
-		if skipCount != 2 {
-			t.Errorf("expected 2 skips (TOOLS.md, HEARTBEAT.md), got %d", skipCount)
+		if skipCount != 1 {
+			t.Errorf("expected 1 skip (HEARTBEAT.md), got %d", skipCount)
 		}
 	})
 

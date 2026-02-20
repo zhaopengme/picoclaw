@@ -9,7 +9,6 @@ var migrateableFiles = []string{
 	"AGENTS.md",
 	"SOUL.md",
 	"USER.md",
-	"TOOLS.md",
 	"HEARTBEAT.md",
 }
 
