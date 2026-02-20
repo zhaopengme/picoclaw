@@ -23,8 +23,8 @@ INSTALL_BIN_DIR=$(INSTALL_PREFIX)/bin
 INSTALL_MAN_DIR=$(INSTALL_PREFIX)/share/man/man1
 
 # Workspace and Skills
-PICOCLAW_HOME?=$(HOME)/.mobaiclaw
-WORKSPACE_DIR?=$(PICOCLAW_HOME)/workspace
+MOBAICLAW_HOME?=$(HOME)/.mobaiclaw
+WORKSPACE_DIR?=$(MOBAICLAW_HOME)/workspace
 WORKSPACE_SKILLS_DIR=$(WORKSPACE_DIR)/skills
 BUILTIN_SKILLS_DIR=$(CURDIR)/skills
 
@@ -112,8 +112,8 @@ uninstall:
 ## uninstall-all: Remove mobaiclaw and all data
 uninstall-all:
 	@echo "Removing workspace and skills..."
-	@rm -rf $(PICOCLAW_HOME)
-	@echo "Removed workspace: $(PICOCLAW_HOME)"
+	@rm -rf $(MOBAICLAW_HOME)
+	@echo "Removed workspace: $(MOBAICLAW_HOME)"
 	@echo "Complete uninstallation done!"
 
 ## clean: Remove build artifacts

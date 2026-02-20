@@ -1,6 +1,6 @@
 services:
   # ─────────────────────────────────────────────
-  # PicoClaw Agent (one-shot query)
+  # MobaiClaw Agent (one-shot query)
   #   docker compose run --rm mobaiclaw-agent -m "Hello"
   # ─────────────────────────────────────────────
   mobaiclaw-agent:
@@ -18,7 +18,7 @@ services:
     tty: true
 
   # ─────────────────────────────────────────────
-  # PicoClaw Gateway (Long-running Bot)
+  # MobaiClaw Gateway (Long-running Bot)
   #   docker compose up mobaiclaw-gateway
   # ─────────────────────────────────────────────
   mobaiclaw-gateway:
