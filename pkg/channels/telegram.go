@@ -390,7 +390,7 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	peerID := fmt.Sprintf("%d", user.ID)
 	if message.Chat.Type != "private" {
 		peerKind = "group"
-		peerID = fmt.Sprintf("%d", chatID)
+		peerID = chatIDStr
 	}
 
 	metadata := map[string]string{
@@ -479,9 +479,9 @@ func markdownToTelegramHTML(text string) string {
 	inlineCodes := extractInlineCodes(text)
 	text = inlineCodes.text
 
-	text = regexp.MustCompile(`^#{1,6}\s+(.+)$`).ReplaceAllString(text, "$1")
+	text = regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`).ReplaceAllString(text, "$1")
 
-	text = regexp.MustCompile(`^>\s*(.*)$`).ReplaceAllString(text, "$1")
+	text = regexp.MustCompile(`(?m)^>\s*(.*)$`).ReplaceAllString(text, "$1")
 
 	text = escapeHTML(text)
 
@@ -491,7 +491,7 @@ func markdownToTelegramHTML(text string) string {
 
 	text = regexp.MustCompile(`__(.+?)__`).ReplaceAllString(text, "<b>$1</b>")
 
-	reItalic := regexp.MustCompile(`_([^_]+)_`)
+	reItalic := regexp.MustCompile(`\b_([^_]+)_\b`)
 	text = reItalic.ReplaceAllStringFunc(text, func(s string) string {
 		match := reItalic.FindStringSubmatch(s)
 		if len(match) < 2 {
@@ -502,7 +502,7 @@ func markdownToTelegramHTML(text string) string {
 
 	text = regexp.MustCompile(`~~(.+?)~~`).ReplaceAllString(text, "<s>$1</s>")
 
-	text = regexp.MustCompile(`^[-*]\s+`).ReplaceAllString(text, "• ")
+	text = regexp.MustCompile(`(?m)^[-*]\s+`).ReplaceAllString(text, "• ")
 
 	for i, code := range inlineCodes.codes {
 		escaped := escapeHTML(code)
