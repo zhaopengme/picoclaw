@@ -145,7 +145,6 @@ func (cb *ContextBuilder) LoadBootstrapFiles() string {
 	bootstrapFiles := []string{
 		"AGENTS.md",
 		"SOUL.md",
-		"USER.md",
 		"IDENTITY.md",
 	}
 
