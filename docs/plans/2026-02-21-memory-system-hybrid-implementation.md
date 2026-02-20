@@ -486,30 +486,48 @@ git commit -m "feat(tools): add memory_delete tool"
 - Modify: `cmd/picoclaw/main.go`
 - Modify: `pkg/agent/context.go`
 
-**Step 1: Write minimal implementation**
-In `cmd/picoclaw/main.go`, register the new tools in `initAgent`:
+**Step 1: Refactor Dependency Injection & Register Tools**
+In `pkg/agent/context.go`, modify `NewContextBuilder` to accept a `*MemoryStore` instance rather than creating it internally:
 ```go
-// Add to initAgent function:
-memoryStoreTool := tools.NewMemoryStoreTool(memory)
+// Change signature
+func NewContextBuilder(workspace string, memoryStore *MemoryStore) *ContextBuilder {
+    // ...
+    return &ContextBuilder{
+        workspace:    workspace,
+        skillsLoader: skills.NewSkillsLoader(workspace, globalSkillsDir, builtinSkillsDir),
+        memory:       memoryStore,
+    }
+}
+```
+
+In `cmd/picoclaw/main.go` (or wherever `ContextBuilder` and tools are initialized), instantiate the `MemoryStore` first and pass it to both:
+```go
+// In initialization flow:
+memoryStore := agent.NewMemoryStore(workspacePath)
+cb := agent.NewContextBuilder(workspacePath, memoryStore)
+
+// Register tools
+memoryStoreTool := tools.NewMemoryStoreTool(memoryStore)
 toolRegistry.Register(memoryStoreTool)
-memoryDeleteTool := tools.NewMemoryDeleteTool(memory)
+memoryDeleteTool := tools.NewMemoryDeleteTool(memoryStore)
 toolRegistry.Register(memoryDeleteTool)
 ```
-*(Note: Ensure `memory` is accessible where tools are registered, you may need to extract `cb.memory` from ContextBuilder or initialize MemoryStore earlier).*
 
-In `pkg/agent/context.go`, update `getIdentity` system prompt instructions:
+**Step 2: Update System Prompt with Defensive Constraints**
+In `pkg/agent/context.go`, rigorously update `getIdentity` system prompt instructions.
 Change:
 ```go
 3. **Memory** - When remembering something, write to %s/memory/MEMORY.md
 ```
 To:
 ```go
-3. **Memory** - You have two types of memory:
-   - **Core Profile**: Permanent facts about the user. You MUST use the 'memory_store' tool to update this and 'memory_delete' to remove items. Do NOT use file editing tools to modify profile.json.
-   - **Daily Notes**: Short-term session logs at %s/memory/YYYYMM/YYYYMMDD.md. The system manages this; you do not need to edit it.
+3. **Memory Management (CRITICAL RULES)**:
+   - **Core Profile**: Permanent facts about the user. You MUST use the 'memory_store' tool to update this and 'memory_delete' to remove items.
+   - **Daily Notes**: Short-term session logs at %s/memory/YYYYMM/YYYYMMDD.md. The system manages this automatically.
+   - **FORBIDDEN ACTIONS**: You are STRICTLY FORBIDDEN from using `edit_file`, `write_file`, or `shell` tools to modify any files inside the `memory/` directory directly. Any memory updates must go through the dedicated memory tools.
 ```
 
-**Step 2: Commit**
+**Step 3: Commit**
 ```bash
 git add cmd/picoclaw/main.go pkg/agent/context.go
 git commit -m "feat: register memory tools and update system prompt constraints"
