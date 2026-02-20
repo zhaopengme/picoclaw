@@ -5,10 +5,10 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - go generate ./cmd/picoclaw
+    - go generate ./cmd/mobaiclaw
 
 builds:
-  - id: picoclaw
+  - id: mobaiclaw
     env:
       - CGO_ENABLED=0
     tags:
@@ -31,18 +31,18 @@ builds:
       - s390x
       - mips64
       - arm
-    main: ./cmd/picoclaw
+    main: ./cmd/mobaiclaw
     ignore:
       - goos: windows
         goarch: arm
 
 dockers_v2:
-  - id: picoclaw
+  - id: mobaiclaw
     dockerfile: Dockerfile.goreleaser
     ids:
-      - picoclaw
+      - mobaiclaw
     images:
-      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/picoclaw"
+      - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/mobaiclaw"
       - "docker.io/{{ .Env.DOCKERHUB_IMAGE_NAME }}"
     tags:
       - "{{ .Tag }}"

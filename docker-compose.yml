@@ -1,40 +1,40 @@
 services:
   # ─────────────────────────────────────────────
   # PicoClaw Agent (one-shot query)
-  #   docker compose run --rm picoclaw-agent -m "Hello"
+  #   docker compose run --rm mobaiclaw-agent -m "Hello"
   # ─────────────────────────────────────────────
-  picoclaw-agent:
+  mobaiclaw-agent:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: picoclaw-agent
+    container_name: mobaiclaw-agent
     profiles:
       - agent
     volumes:
-      - ./config/config.json:/home/picoclaw/.picoclaw/config.json:ro
-      - picoclaw-workspace:/home/picoclaw/.picoclaw/workspace
-    entrypoint: ["picoclaw", "agent"]
+      - ./config/config.json:/home/mobaiclaw/.mobaiclaw/config.json:ro
+      - mobaiclaw-workspace:/home/mobaiclaw/.mobaiclaw/workspace
+    entrypoint: ["mobaiclaw", "agent"]
     stdin_open: true
     tty: true
 
   # ─────────────────────────────────────────────
   # PicoClaw Gateway (Long-running Bot)
-  #   docker compose up picoclaw-gateway
+  #   docker compose up mobaiclaw-gateway
   # ─────────────────────────────────────────────
-  picoclaw-gateway:
+  mobaiclaw-gateway:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: picoclaw-gateway
+    container_name: mobaiclaw-gateway
     restart: unless-stopped
     profiles:
       - gateway
     volumes:
       # Configuration file
-      - ./config/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      - ./config/config.json:/home/mobaiclaw/.mobaiclaw/config.json:ro
       # Persistent workspace (sessions, memory, logs)
-      - picoclaw-workspace:/home/picoclaw/.picoclaw/workspace
+      - mobaiclaw-workspace:/home/mobaiclaw/.mobaiclaw/workspace
     command: ["gateway"]
 
 volumes:
-  picoclaw-workspace:
+  mobaiclaw-workspace:
