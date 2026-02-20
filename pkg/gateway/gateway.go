@@ -27,6 +27,19 @@ func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, 
 }
 
 func (g *CommandGateway) Run(ctx context.Context) error {
+	// Forward outbound messages from agent back to channels
+	if g.agentBus != nil {
+		go func() {
+			for {
+				outMsg, ok := g.agentBus.SubscribeOutbound(ctx)
+				if !ok {
+					return
+				}
+				g.bus.PublishOutbound(outMsg)
+			}
+		}()
+	}
+
 	for {
 		msg, ok := g.bus.ConsumeInbound(ctx)
 		if !ok {
