@@ -33,3 +33,51 @@ func TestParseCompositeChatID(t *testing.T) {
 		})
 	}
 }
+
+func TestMarkdownToTelegramHTML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "Normal text",
+			input: "Hello world",
+			want:  "Hello world",
+		},
+		{
+			name:  "Bold text",
+			input: "**Hello**",
+			want:  "<b>Hello</b>",
+		},
+		{
+			name:  "Intra-word underscore (no italic)",
+			input: "agent_id=main",
+			want:  "agent_id=main",
+		},
+		{
+			name:  "Multiple intra-word underscores",
+			input: "session_key=agent:main, agent_id=main",
+			want:  "session_key=agent:main, agent_id=main",
+		},
+		{
+			name:  "Nested bold and italic",
+			input: "**_Hello_**",
+			want:  "<b><i>Hello</i></b>",
+		},
+		{
+			name:  "Complex overlapping scenario from bug report",
+			input: "**Channel（渠道）隔离**\n- feis... {session_key=agent:main:main, iterations=1, final_length=1108, agent_id=main}",
+			want:  "<b>Channel（渠道）隔离</b>\n• feis... {session_key=agent:main:main, iterations=1, final_length=1108, agent_id=main}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := markdownToTelegramHTML(tt.input)
+			if got != tt.want {
+				t.Errorf("markdownToTelegramHTML()\ninput: %q\ngot:  %q\nwant: %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
