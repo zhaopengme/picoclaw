@@ -41,7 +41,17 @@ const handler = async (event) => {
     return;
   }
 
+  // Skip sub-agent sessions to avoid bootstrap issues
+  const sessionKey = event.sessionKey || '';
+  if (sessionKey.includes(':subagent:')) {
+    return;
+  }
+
   // Inject the reminder as a virtual bootstrap file
+  if (!event.context.bootstrapFiles) {
+    event.context.bootstrapFiles = [];
+  }
+  
   // Check that bootstrapFiles is an array before pushing
   if (Array.isArray(event.context.bootstrapFiles)) {
     event.context.bootstrapFiles.push({
