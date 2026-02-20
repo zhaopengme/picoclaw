@@ -29,7 +29,7 @@ func getGlobalConfigDir() string {
 	return filepath.Join(home, ".picoclaw")
 }
 
-func NewContextBuilder(workspace string) *ContextBuilder {
+func NewContextBuilder(workspace string, memoryStore *MemoryStore) *ContextBuilder {
 	// builtin skills: skills directory in current project
 	// Use the skills/ directory under the current working directory
 	wd, _ := os.Getwd()
@@ -39,7 +39,7 @@ func NewContextBuilder(workspace string) *ContextBuilder {
 	return &ContextBuilder{
 		workspace:    workspace,
 		skillsLoader: skills.NewSkillsLoader(workspace, globalSkillsDir, builtinSkillsDir),
-		memory:       NewMemoryStore(workspace),
+		memory:       memoryStore,
 	}
 }
 
@@ -68,7 +68,7 @@ You are picoclaw, a helpful AI assistant.
 
 ## Workspace
 Your workspace is at: %s
-- Memory: %s/memory/MEMORY.md
+- Core Profile: %s/memory/profile.json
 - Daily Notes: %s/memory/YYYYMM/YYYYMMDD.md
 - Skills: %s/skills/{skill-name}/SKILL.md
 
@@ -80,7 +80,10 @@ Your workspace is at: %s
 
 2. **Be helpful and accurate** - When using tools, briefly explain what you're doing.
 
-3. **Memory** - When remembering something, write to %s/memory/MEMORY.md`,
+3. **Memory Management (CRITICAL RULES)**:
+   - **Core Profile**: Permanent facts about the user. You MUST use the 'memory_store' tool to update this and 'memory_delete' to remove items.
+   - **Daily Notes**: Short-term session logs at %s/memory/YYYYMM/YYYYMMDD.md. The system manages this automatically.
+   - **FORBIDDEN ACTIONS**: You are STRICTLY FORBIDDEN from using 'edit_file', 'write_file', or 'shell' tools to modify any files inside the 'memory/' directory directly. Any memory updates must go through the dedicated memory tools.`,
 		now, runtime, workspacePath, workspacePath, workspacePath, workspacePath, toolsSection, workspacePath)
 }
 

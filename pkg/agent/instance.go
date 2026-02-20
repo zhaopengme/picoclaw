@@ -58,8 +58,13 @@ func NewAgentInstance(
 	sessionsDir := filepath.Join(workspace, "sessions")
 	sessionsManager := session.NewSessionManager(sessionsDir)
 
-	contextBuilder := NewContextBuilder(workspace)
+	memoryStore := NewMemoryStore(workspace)
+	contextBuilder := NewContextBuilder(workspace, memoryStore)
 	contextBuilder.SetToolsRegistry(toolsRegistry)
+
+	// Register memory tools
+	toolsRegistry.Register(tools.NewMemoryStoreTool(memoryStore))
+	toolsRegistry.Register(tools.NewMemoryDeleteTool(memoryStore))
 
 	agentID := routing.DefaultAgentID
 	agentName := ""
