@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/constants"
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/state"
-	"github.com/sipeed/picoclaw/pkg/tools"
+	"github.com/zhaopengme/mobaiclaw/pkg/bus"
+	"github.com/zhaopengme/mobaiclaw/pkg/constants"
+	"github.com/zhaopengme/mobaiclaw/pkg/logger"
+	"github.com/zhaopengme/mobaiclaw/pkg/state"
+	"github.com/zhaopengme/mobaiclaw/pkg/tools"
 )
 
 const (

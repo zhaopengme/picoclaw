@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/mymmrac/telego"
-	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/zhaopengme/mobaiclaw/pkg/config"
 )
 
 type TelegramCommander interface {

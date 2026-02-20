@@ -13,10 +13,10 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/sipeed/picoclaw/pkg/agent"
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/logger"
-	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/zhaopengme/mobaiclaw/pkg/agent"
+	"github.com/zhaopengme/mobaiclaw/pkg/bus"
+	"github.com/zhaopengme/mobaiclaw/pkg/logger"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers"
 )
 
 func agentCmd() {

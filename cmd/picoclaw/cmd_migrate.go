@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sipeed/picoclaw/pkg/migrate"
+	"github.com/zhaopengme/mobaiclaw/pkg/migrate"
 )
 
 func migrateCmd() {

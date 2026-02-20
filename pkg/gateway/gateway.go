@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sipeed/picoclaw/pkg/agent"
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/channels"
+	"github.com/zhaopengme/mobaiclaw/pkg/agent"
+	"github.com/zhaopengme/mobaiclaw/pkg/bus"
+	"github.com/zhaopengme/mobaiclaw/pkg/channels"
 )
 
 type CommandGateway struct {

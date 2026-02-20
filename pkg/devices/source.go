@@ -1,5 +1,5 @@
 package devices
 
-import "github.com/sipeed/picoclaw/pkg/devices/events"
+import "github.com/zhaopengme/mobaiclaw/pkg/devices/events"
 
 type EventSource = events.EventSource

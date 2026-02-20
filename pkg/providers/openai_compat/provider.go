@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/providers/protocoltypes"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/protocoltypes"
 )
 
 type ToolCall = protocoltypes.ToolCall

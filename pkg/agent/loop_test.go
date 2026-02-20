@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/bus"
-	"github.com/sipeed/picoclaw/pkg/config"
-	"github.com/sipeed/picoclaw/pkg/providers"
-	"github.com/sipeed/picoclaw/pkg/tools"
+	"github.com/zhaopengme/mobaiclaw/pkg/bus"
+	"github.com/zhaopengme/mobaiclaw/pkg/config"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers"
+	"github.com/zhaopengme/mobaiclaw/pkg/tools"
 )
 
 func TestRecordLastChannel(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sipeed/picoclaw/pkg/config"
+	"github.com/zhaopengme/mobaiclaw/pkg/config"
 )
 
 // --- Compile-time interface check ---
