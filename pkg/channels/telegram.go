@@ -121,22 +121,6 @@ func (c *TelegramChannel) Start(ctx context.Context) error {
 	}
 
 	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		c.commands.Help(ctx, message)
-		return nil
-	}, th.CommandEqual("help"))
-	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		return c.commands.Start(ctx, message)
-	}, th.CommandEqual("start"))
-
-	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		return c.commands.Show(ctx, message)
-	}, th.CommandEqual("show"))
-
-	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		return c.commands.List(ctx, message)
-	}, th.CommandEqual("list"))
-
-	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
 		return c.handleMessage(ctx, &message)
 	}, th.Or(th.AnyMessageWithText(), th.AnyMessageWithCaption(), th.AnyMessageWithMedia()))
 

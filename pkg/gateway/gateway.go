@@ -88,6 +88,16 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 	args := parts[1:]
 
 	switch cmd {
+	case "/start":
+		return "Hello! I am PicoClaw 🦞", true
+
+	case "/help":
+		return `/start - Start the bot
+/help - Show this help message
+/show [model|channel|agents] - Show current configuration
+/list [models|channels|agents] - List available options
+/switch [model|channel] to <name> - Switch current model or channel`, true
+
 	case "/show":
 		if len(args) < 1 {
 			return "Usage: /show [model|channel|agents]", true
