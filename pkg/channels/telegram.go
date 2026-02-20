@@ -245,7 +245,7 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	chatIDStr := fmt.Sprintf("%d", chatID)
 
 	// Support for Forum Topics (Threads)
-	if message.IsTopicMessage && message.MessageThreadID != 0 {
+	if message.MessageThreadID != 0 {
 		chatIDStr = fmt.Sprintf("%d:%d", chatID, message.MessageThreadID)
 	}
 
@@ -365,7 +365,7 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		ChatID: tu.ID(chatID),
 		Action: telego.ChatActionTyping,
 	}
-	if message.IsTopicMessage && message.MessageThreadID != 0 {
+	if message.MessageThreadID != 0 {
 		chatActionParams.MessageThreadID = message.MessageThreadID
 	}
 	err := c.bot.SendChatAction(ctx, chatActionParams)
@@ -390,7 +390,7 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		ChatID: tu.ID(chatID),
 		Text:   "Thinking... 💭",
 	}
-	if message.IsTopicMessage && message.MessageThreadID != 0 {
+	if message.MessageThreadID != 0 {
 		thinkingMsgParams.MessageThreadID = message.MessageThreadID
 	}
 	pMsg, err := c.bot.SendMessage(ctx, thinkingMsgParams)
@@ -406,6 +406,12 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		peerID = chatIDStr
 	}
 
+	// Force isolation for threads/topics regardless of chat type
+	if message.MessageThreadID != 0 {
+		peerKind = "thread"
+		peerID = chatIDStr
+	}
+
 	metadata := map[string]string{
 		"message_id": fmt.Sprintf("%d", message.MessageID),
 		"user_id":    fmt.Sprintf("%d", user.ID),
@@ -415,7 +421,7 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		"peer_kind":  peerKind,
 		"peer_id":    peerID,
 	}
-	if message.IsTopicMessage && message.MessageThreadID != 0 {
+	if message.MessageThreadID != 0 {
 		metadata["thread_id"] = fmt.Sprintf("%d", message.MessageThreadID)
 	}
 
