@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -43,5 +44,33 @@ func TestGetMemoryContextFormatting(t *testing.T) {
 
 	if !strings.Contains(ctx, expectedContains) {
 		t.Errorf("Context missing expected formatting. Got:\n%s", ctx)
+	}
+}
+
+func TestProfileCorruptionProtection(t *testing.T) {
+	tempDir := t.TempDir()
+	ms := NewMemoryStore(tempDir)
+
+	// Create a corrupted profile.json
+	corruptData := []byte(`{ "user": "Mike", "broken_key" }`)
+	err := os.WriteFile(ms.profileFile, corruptData, 0644)
+	if err != nil {
+		t.Fatalf("Failed to write corrupt data: %v", err)
+	}
+
+	// Try to write a new key, should fail because of parsing error
+	err = ms.WriteProfileKey("new_key", "value")
+	if err == nil {
+		t.Errorf("Expected an error when writing to a corrupted profile, got nil")
+	} else if !strings.Contains(err.Error(), "corrupted") {
+		t.Errorf("Expected corruption error message, got: %v", err)
+	}
+
+	// Try to delete a key, should also fail
+	err = ms.DeleteProfileKey("user")
+	if err == nil {
+		t.Errorf("Expected an error when deleting from a corrupted profile, got nil")
+	} else if !strings.Contains(err.Error(), "corrupted") {
+		t.Errorf("Expected corruption error message, got: %v", err)
 	}
 }

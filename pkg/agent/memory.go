@@ -70,14 +70,16 @@ func (ms *MemoryStore) WriteProfileKey(key, value string) error {
 	profile := make(map[string]string)
 	data, err := os.ReadFile(ms.profileFile)
 	if err == nil && len(data) > 0 {
-		_ = json.Unmarshal(data, &profile)
+		if err := json.Unmarshal(data, &profile); err != nil {
+			return fmt.Errorf("failed to parse profile.json (file might be corrupted): %w", err)
+		}
 	}
 
 	profile[key] = value
 
 	newData, err := json.MarshalIndent(profile, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal profile data: %w", err)
 	}
 	return os.WriteFile(ms.profileFile, newData, 0644)
 }
@@ -90,7 +92,9 @@ func (ms *MemoryStore) DeleteProfileKey(key string) error {
 	profile := make(map[string]string)
 	data, err := os.ReadFile(ms.profileFile)
 	if err == nil && len(data) > 0 {
-		_ = json.Unmarshal(data, &profile)
+		if err := json.Unmarshal(data, &profile); err != nil {
+			return fmt.Errorf("failed to parse profile.json (file might be corrupted): %w", err)
+		}
 	}
 
 	if _, exists := profile[key]; !exists {
@@ -101,7 +105,7 @@ func (ms *MemoryStore) DeleteProfileKey(key string) error {
 
 	newData, err := json.MarshalIndent(profile, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal profile data: %w", err)
 	}
 	return os.WriteFile(ms.profileFile, newData, 0644)
 }
