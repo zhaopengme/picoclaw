@@ -483,7 +483,7 @@ git commit -m "feat(tools): add memory_delete tool"
 ### Task 6: Update Tool Registry & Context Prompt
 
 **Files:**
-- Modify: `cmd/picoclaw/main.go`
+- Modify: `pkg/agent/instance.go` (or `pkg/agent/loop.go`)
 - Modify: `pkg/agent/context.go`
 
 **Step 1: Refactor Dependency Injection & Register Tools**
@@ -500,17 +500,17 @@ func NewContextBuilder(workspace string, memoryStore *MemoryStore) *ContextBuild
 }
 ```
 
-In `cmd/picoclaw/main.go` (or wherever `ContextBuilder` and tools are initialized), instantiate the `MemoryStore` first and pass it to both:
+In `pkg/agent/instance.go` (or `pkg/agent/loop.go` depending on the recent Gateway/Bus refactor), instantiate the `MemoryStore` and pass it to the ContextBuilder, then register the new tools:
 ```go
-// In initialization flow:
-memoryStore := agent.NewMemoryStore(workspacePath)
-cb := agent.NewContextBuilder(workspacePath, memoryStore)
+// In the agent initialization flow (e.g., NewAgent):
+memoryStore := NewMemoryStore(workspace)
+cb := NewContextBuilder(workspace, memoryStore)
 
-// Register tools
+// Register tools to the toolsRegistry
 memoryStoreTool := tools.NewMemoryStoreTool(memoryStore)
-toolRegistry.Register(memoryStoreTool)
+toolsRegistry.Register(memoryStoreTool)
 memoryDeleteTool := tools.NewMemoryDeleteTool(memoryStore)
-toolRegistry.Register(memoryDeleteTool)
+toolsRegistry.Register(memoryDeleteTool)
 ```
 
 **Step 2: Update System Prompt with Defensive Constraints**
