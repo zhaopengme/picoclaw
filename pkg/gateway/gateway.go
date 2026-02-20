@@ -89,7 +89,7 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 
 	switch cmd {
 	case "/start":
-		return "Hello! I am PicoClaw 🦞", true
+		return "Hello! I am MobaiClaw 🦞", true
 
 	case "/help":
 		return `/start - Start the bot

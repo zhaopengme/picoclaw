@@ -26,7 +26,7 @@ func getGlobalConfigDir() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(home, ".picoclaw")
+	return filepath.Join(home, ".mobaiclaw")
 }
 
 func NewContextBuilder(workspace string, memoryStore *MemoryStore) *ContextBuilder {
@@ -56,9 +56,9 @@ func (cb *ContextBuilder) getIdentity() string {
 	// Build tools section dynamically
 	toolsSection := cb.buildToolsSection()
 
-	return fmt.Sprintf(`# picoclaw 🦞
+	return fmt.Sprintf(`# mobaiclaw 🦞
 
-You are picoclaw, a helpful AI assistant.
+You are mobaiclaw, a helpful AI assistant.
 
 ## Current Time
 %s

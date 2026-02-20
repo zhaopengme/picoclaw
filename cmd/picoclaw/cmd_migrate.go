@@ -1,4 +1,4 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// MobaiClaw - Ultra-lightweight personal AI agent
 // License: MIT
 
 package main
@@ -36,9 +36,9 @@ func migrateCmd() {
 				opts.OpenClawHome = args[i+1]
 				i++
 			}
-		case "--picoclaw-home":
+		case "--mobaiclaw-home":
 			if i+1 < len(args) {
-				opts.PicoClawHome = args[i+1]
+				opts.MobaiClawHome = args[i+1]
 				i++
 			}
 		default:
@@ -60,9 +60,9 @@ func migrateCmd() {
 }
 
 func migrateHelp() {
-	fmt.Println("\nMigrate from OpenClaw to PicoClaw")
+	fmt.Println("\nMigrate from OpenClaw to MobaiClaw")
 	fmt.Println()
-	fmt.Println("Usage: picoclaw migrate [options]")
+	fmt.Println("Usage: mobaiclaw migrate [options]")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  --dry-run          Show what would be migrated without making changes")
@@ -71,11 +71,11 @@ func migrateHelp() {
 	fmt.Println("  --workspace-only   Only migrate workspace files, skip config")
 	fmt.Println("  --force            Skip confirmation prompts")
 	fmt.Println("  --openclaw-home    Override OpenClaw home directory (default: ~/.openclaw)")
-	fmt.Println("  --picoclaw-home    Override PicoClaw home directory (default: ~/.picoclaw)")
+	fmt.Println("  --mobaiclaw-home    Override MobaiClaw home directory (default: ~/.mobaiclaw)")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  picoclaw migrate              Detect and migrate from OpenClaw")
-	fmt.Println("  picoclaw migrate --dry-run    Show what would be migrated")
-	fmt.Println("  picoclaw migrate --refresh    Re-sync workspace files")
-	fmt.Println("  picoclaw migrate --force      Migrate without confirmation")
+	fmt.Println("  mobaiclaw migrate              Detect and migrate from OpenClaw")
+	fmt.Println("  mobaiclaw migrate --dry-run    Show what would be migrated")
+	fmt.Println("  mobaiclaw migrate --refresh    Re-sync workspace files")
+	fmt.Println("  mobaiclaw migrate --force      Migrate without confirmation")
 }

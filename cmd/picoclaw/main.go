@@ -1,8 +1,8 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// MobaiClaw - Ultra-lightweight personal AI agent
 // Inspired by and based on nanobot: https://github.com/HKUDS/nanobot
 // License: MIT
 //
-// Copyright (c) 2026 PicoClaw contributors
+// Copyright (c) 2026 MobaiClaw contributors
 
 package main
 
@@ -48,7 +48,7 @@ func formatBuildInfo() (build string, goVer string) {
 }
 
 func printVersion() {
-	fmt.Printf("%s picoclaw %s\n", logo, formatVersion())
+	fmt.Printf("%s mobaiclaw %s\n", logo, formatVersion())
 	build, goVer := formatBuildInfo()
 	if build != "" {
 		fmt.Printf("  Build: %s\n", build)
@@ -134,7 +134,7 @@ func main() {
 		// 获取全局配置目录和内置 skills 目录
 		globalDir := filepath.Dir(getConfigPath())
 		globalSkillsDir := filepath.Join(globalDir, "skills")
-		builtinSkillsDir := filepath.Join(globalDir, "picoclaw", "skills")
+		builtinSkillsDir := filepath.Join(globalDir, "mobaiclaw", "skills")
 		skillsLoader := skills.NewSkillsLoader(workspace, globalSkillsDir, builtinSkillsDir)
 
 		switch subcommand {
@@ -144,7 +144,7 @@ func main() {
 			skillsInstallCmd(installer, cfg)
 		case "remove", "uninstall":
 			if len(os.Args) < 4 {
-				fmt.Println("Usage: picoclaw skills remove <skill-name>")
+				fmt.Println("Usage: mobaiclaw skills remove <skill-name>")
 				return
 			}
 			skillsRemoveCmd(installer, os.Args[3])
@@ -156,7 +156,7 @@ func main() {
 			skillsSearchCmd(installer)
 		case "show":
 			if len(os.Args) < 4 {
-				fmt.Println("Usage: picoclaw skills show <skill-name>")
+				fmt.Println("Usage: mobaiclaw skills show <skill-name>")
 				return
 			}
 			skillsShowCmd(skillsLoader, os.Args[3])
@@ -174,24 +174,24 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Printf("%s picoclaw - Personal AI Assistant v%s\n\n", logo, version)
-	fmt.Println("Usage: picoclaw <command>")
+	fmt.Printf("%s mobaiclaw - Personal AI Assistant v%s\n\n", logo, version)
+	fmt.Println("Usage: mobaiclaw <command>")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  onboard     Initialize picoclaw configuration and workspace")
+	fmt.Println("  onboard     Initialize mobaiclaw configuration and workspace")
 	fmt.Println("  agent       Interact with the agent directly")
 	fmt.Println("  auth        Manage authentication (login, logout, status)")
-	fmt.Println("  gateway     Start picoclaw gateway")
-	fmt.Println("  status      Show picoclaw status")
+	fmt.Println("  gateway     Start mobaiclaw gateway")
+	fmt.Println("  status      Show mobaiclaw status")
 	fmt.Println("  cron        Manage scheduled tasks")
-	fmt.Println("  migrate     Migrate from OpenClaw to PicoClaw")
+	fmt.Println("  migrate     Migrate from OpenClaw to MobaiClaw")
 	fmt.Println("  skills      Manage skills (install, list, remove)")
 	fmt.Println("  version     Show version information")
 }
 
 func getConfigPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".picoclaw", "config.json")
+	return filepath.Join(home, ".mobaiclaw", "config.json")
 }
 
 func loadConfig() (*config.Config, error) {

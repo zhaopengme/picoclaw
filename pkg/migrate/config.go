@@ -101,7 +101,7 @@ func ConvertConfig(data map[string]interface{}) (*config.Config, []string, error
 
 			if !supportedProviders[name] {
 				if apiKey != "" || apiBase != "" {
-					warnings = append(warnings, fmt.Sprintf("Provider '%s' not supported in PicoClaw, skipping", name))
+					warnings = append(warnings, fmt.Sprintf("Provider '%s' not supported in MobaiClaw, skipping", name))
 				}
 				continue
 			}
@@ -136,7 +136,7 @@ func ConvertConfig(data map[string]interface{}) (*config.Config, []string, error
 				continue
 			}
 			if !supportedChannels[name] {
-				warnings = append(warnings, fmt.Sprintf("Channel '%s' not supported in PicoClaw, skipping", name))
+				warnings = append(warnings, fmt.Sprintf("Channel '%s' not supported in MobaiClaw, skipping", name))
 				continue
 			}
 			enabled, _ := getBool(cMap, "enabled")
@@ -338,7 +338,7 @@ func convertKeysToSnake(data interface{}) interface{} {
 }
 
 func rewriteWorkspacePath(path string) string {
-	path = strings.Replace(path, ".openclaw", ".picoclaw", 1)
+	path = strings.Replace(path, ".openclaw", ".mobaiclaw", 1)
 	return path
 }
 

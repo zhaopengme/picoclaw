@@ -1,4 +1,4 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// MobaiClaw - Ultra-lightweight personal AI agent
 // License: MIT
 
 package main

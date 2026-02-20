@@ -1,4 +1,4 @@
-// PicoClaw - Ultra-lightweight personal AI agent
+// MobaiClaw - Ultra-lightweight personal AI agent
 // License: MIT
 
 package main
@@ -40,7 +40,7 @@ func onboard() {
 	workspace := cfg.WorkspacePath()
 	createWorkspaceTemplates(workspace)
 
-	fmt.Printf("%s picoclaw is ready!\n", logo)
+	fmt.Printf("%s mobaiclaw is ready!\n", logo)
 	fmt.Println("\nNext steps:")
 	fmt.Println("  1. Add your API key to", configPath)
 	fmt.Println("")
@@ -50,7 +50,7 @@ func onboard() {
 	fmt.Println("")
 	fmt.Println("     See README.md for 17+ supported providers.")
 	fmt.Println("")
-	fmt.Println("  2. Chat: picoclaw agent -m \"Hello!\"")
+	fmt.Println("  2. Chat: mobaiclaw agent -m \"Hello!\"")
 }
 
 func copyEmbeddedToTarget(targetDir string) error {
