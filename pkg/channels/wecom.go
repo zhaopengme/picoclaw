@@ -91,7 +91,7 @@ type WeComBotReplyMessage struct {
 }
 
 // NewWeComBotChannel creates a new WeCom Bot channel instance
-func NewWeComBotChannel(cfg config.WeComConfig, messageBus *bus.MessageBus) (*WeComBotChannel, error) {
+func NewWeComBotChannel(cfg config.WeComConfig, messageBus bus.Broker) (*WeComBotChannel, error) {
 	if cfg.Token == "" || cfg.WebhookURL == "" {
 		return nil, fmt.Errorf("wecom token and webhook_url are required")
 	}

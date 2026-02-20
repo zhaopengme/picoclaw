@@ -97,7 +97,7 @@ type oneBotMessageSegment struct {
 	Data map[string]interface{} `json:"data"`
 }
 
-func NewOneBotChannel(cfg config.OneBotConfig, messageBus *bus.MessageBus) (*OneBotChannel, error) {
+func NewOneBotChannel(cfg config.OneBotConfig, messageBus bus.Broker) (*OneBotChannel, error) {
 	base := NewBaseChannel("onebot", cfg, messageBus, cfg.AllowFrom)
 
 	const dedupSize = 1024

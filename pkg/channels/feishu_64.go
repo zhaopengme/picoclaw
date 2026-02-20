@@ -30,7 +30,7 @@ type FeishuChannel struct {
 	cancel context.CancelFunc
 }
 
-func NewFeishuChannel(cfg config.FeishuConfig, bus *bus.MessageBus) (*FeishuChannel, error) {
+func NewFeishuChannel(cfg config.FeishuConfig, bus bus.Broker) (*FeishuChannel, error) {
 	base := NewBaseChannel("feishu", cfg, bus, cfg.AllowFrom)
 
 	return &FeishuChannel{

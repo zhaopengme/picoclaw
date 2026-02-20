@@ -30,7 +30,7 @@ type QQChannel struct {
 	mu             sync.RWMutex
 }
 
-func NewQQChannel(cfg config.QQConfig, messageBus *bus.MessageBus) (*QQChannel, error) {
+func NewQQChannel(cfg config.QQConfig, messageBus bus.Broker) (*QQChannel, error) {
 	base := NewBaseChannel("qq", cfg, messageBus, cfg.AllowFrom)
 
 	return &QQChannel{

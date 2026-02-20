@@ -19,7 +19,7 @@ import (
 
 type Manager struct {
 	channels     map[string]Channel
-	bus          *bus.MessageBus
+	bus          bus.Broker
 	config       *config.Config
 	dispatchTask *asyncTask
 	mu           sync.RWMutex
@@ -29,7 +29,7 @@ type asyncTask struct {
 	cancel context.CancelFunc
 }
 
-func NewManager(cfg *config.Config, messageBus *bus.MessageBus) (*Manager, error) {
+func NewManager(cfg *config.Config, messageBus bus.Broker) (*Manager, error) {
 	m := &Manager{
 		channels: make(map[string]Channel),
 		bus:      messageBus,

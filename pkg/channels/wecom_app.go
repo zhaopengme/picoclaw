@@ -118,7 +118,7 @@ type WeComSendMessageResponse struct {
 type PKCS7Padding struct{}
 
 // NewWeComAppChannel creates a new WeCom App channel instance
-func NewWeComAppChannel(cfg config.WeComAppConfig, messageBus *bus.MessageBus) (*WeComAppChannel, error) {
+func NewWeComAppChannel(cfg config.WeComAppConfig, messageBus bus.Broker) (*WeComAppChannel, error) {
 	if cfg.CorpID == "" || cfg.CorpSecret == "" || cfg.AgentID == 0 {
 		return nil, fmt.Errorf("wecom_app corp_id, corp_secret and agent_id are required")
 	}

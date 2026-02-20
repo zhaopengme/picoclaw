@@ -32,7 +32,7 @@ type DiscordChannel struct {
 	botUserID   string                   // stored for mention checking
 }
 
-func NewDiscordChannel(cfg config.DiscordConfig, bus *bus.MessageBus) (*DiscordChannel, error) {
+func NewDiscordChannel(cfg config.DiscordConfig, bus bus.Broker) (*DiscordChannel, error) {
 	session, err := discordgo.New("Bot " + cfg.Token)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discord session: %w", err)
