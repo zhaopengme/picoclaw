@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -151,7 +152,7 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		return fmt.Errorf("telegram bot not running")
 	}
 
-	chatID, err := parseChatID(msg.ChatID)
+	chatID, _, err := parseCompositeChatID(msg.ChatID)
 	if err != nil {
 		return fmt.Errorf("invalid chat ID: %w", err)
 	}
@@ -414,10 +415,23 @@ func (c *TelegramChannel) downloadFile(ctx context.Context, fileID, ext string) 
 	return c.downloadFileWithInfo(file, ext)
 }
 
-func parseChatID(chatIDStr string) (int64, error) {
-	var id int64
-	_, err := fmt.Sscanf(chatIDStr, "%d", &id)
-	return id, err
+func parseCompositeChatID(chatIDStr string) (int64, int, error) {
+	parts := strings.SplitN(chatIDStr, ":", 2)
+	chatID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid chat ID format: %w", err)
+	}
+
+	var threadID int
+	if len(parts) > 1 {
+		threadID, err = strconv.Atoi(parts[1])
+		if err != nil {
+			return chatID, 0, fmt.Errorf("invalid thread ID format: %w", err)
+		}
+	}
+
+	return chatID, threadID, nil
+
 }
 
 func markdownToTelegramHTML(text string) string {
