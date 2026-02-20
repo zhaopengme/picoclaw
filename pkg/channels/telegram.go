@@ -152,7 +152,7 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		return fmt.Errorf("telegram bot not running")
 	}
 
-	chatID, _, err := parseCompositeChatID(msg.ChatID)
+	chatID, threadID, err := parseCompositeChatID(msg.ChatID)
 	if err != nil {
 		return fmt.Errorf("invalid chat ID: %w", err)
 	}
@@ -170,8 +170,13 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 	// Try to edit placeholder
 	if pID, ok := c.placeholders.Load(msg.ChatID); ok {
 		c.placeholders.Delete(msg.ChatID)
-		editMsg := tu.EditMessageText(tu.ID(chatID), pID.(int), htmlContent)
-		editMsg.ParseMode = telego.ModeHTML
+
+		editMsg := &telego.EditMessageTextParams{
+			ChatID:    tu.ID(chatID),
+			MessageID: pID.(int),
+			Text:      htmlContent,
+			ParseMode: telego.ModeHTML,
+		}
 
 		if _, err = c.bot.EditMessageText(ctx, editMsg); err == nil {
 			return nil
@@ -179,8 +184,14 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		// Fallback to new message if edit fails
 	}
 
-	tgMsg := tu.Message(tu.ID(chatID), htmlContent)
-	tgMsg.ParseMode = telego.ModeHTML
+	tgMsg := &telego.SendMessageParams{
+		ChatID:    tu.ID(chatID),
+		Text:      htmlContent,
+		ParseMode: telego.ModeHTML,
+	}
+	if threadID != 0 {
+		tgMsg.MessageThreadID = threadID
+	}
 
 	if _, err = c.bot.SendMessage(ctx, tgMsg); err != nil {
 		logger.ErrorCF("telegram", "HTML parse failed, falling back to plain text", map[string]interface{}{
