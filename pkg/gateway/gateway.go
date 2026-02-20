@@ -2,8 +2,10 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/sipeed/picoclaw/pkg/agent"
 	"github.com/sipeed/picoclaw/pkg/bus"
 	"github.com/sipeed/picoclaw/pkg/channels"
 )
@@ -12,13 +14,15 @@ type CommandGateway struct {
 	bus            bus.Broker
 	channelManager *channels.Manager
 	agentBus       bus.Broker // for forwarding to agent
+	agentRegistry  *agent.AgentRegistry // to fetch models
 }
 
-func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager) *CommandGateway {
+func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry) *CommandGateway {
 	return &CommandGateway{
 		bus:            b,
 		agentBus:       agentBus,
 		channelManager: cm,
+		agentRegistry:  registry,
 	}
 }
 
@@ -30,7 +34,20 @@ func (g *CommandGateway) Run(ctx context.Context) error {
 		}
 
 		if strings.HasPrefix(msg.Content, "/") {
-			g.handleCommand(ctx, msg)
+			if response, handled := g.handleCommand(ctx, msg); handled {
+				if response != "" {
+					g.bus.PublishOutbound(bus.OutboundMessage{
+						Channel: msg.Channel,
+						ChatID:  msg.ChatID,
+						Content: response,
+					})
+				}
+			} else {
+				// Forward unhandled commands to pure Agent Loop just in case
+				if g.agentBus != nil {
+					g.agentBus.PublishInbound(msg)
+				}
+			}
 		} else {
 			// Forward to pure Agent Loop
 			if g.agentBus != nil {
@@ -40,12 +57,104 @@ func (g *CommandGateway) Run(ctx context.Context) error {
 	}
 }
 
-func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessage) {
-	// We'll move the logic from AgentLoop here in the next task.
-	// For now, just echo "Command received"
-	g.bus.PublishOutbound(bus.OutboundMessage{
-		Channel: msg.Channel,
-		ChatID:  msg.ChatID,
-		Content: "Command acknowledged by Gateway",
-	})
+func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessage) (string, bool) {
+	content := strings.TrimSpace(msg.Content)
+	if !strings.HasPrefix(content, "/") {
+		return "", false
+	}
+
+	parts := strings.Fields(content)
+	if len(parts) == 0 {
+		return "", false
+	}
+
+	cmd := parts[0]
+	args := parts[1:]
+
+	switch cmd {
+	case "/show":
+		if len(args) < 1 {
+			return "Usage: /show [model|channel|agents]", true
+		}
+		switch args[0] {
+		case "model":
+			if g.agentRegistry == nil {
+				return "No registry available", true
+			}
+			defaultAgent := g.agentRegistry.GetDefaultAgent()
+			if defaultAgent == nil {
+				return "No default agent configured", true
+			}
+			return fmt.Sprintf("Current model: %s", defaultAgent.Model), true
+		case "channel":
+			return fmt.Sprintf("Current channel: %s", msg.Channel), true
+		case "agents":
+			if g.agentRegistry == nil {
+				return "No registry available", true
+			}
+			agentIDs := g.agentRegistry.ListAgentIDs()
+			return fmt.Sprintf("Registered agents: %s", strings.Join(agentIDs, ", ")), true
+		default:
+			return fmt.Sprintf("Unknown show target: %s", args[0]), true
+		}
+
+	case "/list":
+		if len(args) < 1 {
+			return "Usage: /list [models|channels|agents]", true
+		}
+		switch args[0] {
+		case "models":
+			return "Available models: configured in config.json per agent", true
+		case "channels":
+			if g.channelManager == nil {
+				return "Channel manager not initialized", true
+			}
+			channels := g.channelManager.GetEnabledChannels()
+			if len(channels) == 0 {
+				return "No channels enabled", true
+			}
+			return fmt.Sprintf("Enabled channels: %s", strings.Join(channels, ", ")), true
+		case "agents":
+			if g.agentRegistry == nil {
+				return "No registry available", true
+			}
+			agentIDs := g.agentRegistry.ListAgentIDs()
+			return fmt.Sprintf("Registered agents: %s", strings.Join(agentIDs, ", ")), true
+		default:
+			return fmt.Sprintf("Unknown list target: %s", args[0]), true
+		}
+
+	case "/switch":
+		if len(args) < 3 || args[1] != "to" {
+			return "Usage: /switch [model|channel] to <name>", true
+		}
+		target := args[0]
+		value := args[2]
+
+		switch target {
+		case "model":
+			if g.agentRegistry == nil {
+				return "No registry available", true
+			}
+			defaultAgent := g.agentRegistry.GetDefaultAgent()
+			if defaultAgent == nil {
+				return "No default agent configured", true
+			}
+			oldModel := defaultAgent.Model
+			defaultAgent.Model = value
+			return fmt.Sprintf("Switched model from %s to %s", oldModel, value), true
+		case "channel":
+			if g.channelManager == nil {
+				return "Channel manager not initialized", true
+			}
+			if _, exists := g.channelManager.GetChannel(value); !exists && value != "cli" {
+				return fmt.Sprintf("Channel '%s' not found or not enabled", value), true
+			}
+			return fmt.Sprintf("Switched target channel to %s", value), true
+		default:
+			return fmt.Sprintf("Unknown switch target: %s", target), true
+		}
+	}
+
+	return "", false
 }

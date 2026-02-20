@@ -15,6 +15,7 @@ import (
 	"github.com/sipeed/picoclaw/pkg/agent"
 	"github.com/sipeed/picoclaw/pkg/bus"
 	"github.com/sipeed/picoclaw/pkg/channels"
+	"github.com/sipeed/picoclaw/pkg/gateway"
 	"github.com/sipeed/picoclaw/pkg/config"
 	"github.com/sipeed/picoclaw/pkg/cron"
 	"github.com/sipeed/picoclaw/pkg/devices"
@@ -54,8 +55,9 @@ func gatewayCmd() {
 		cfg.Agents.Defaults.Model = modelID
 	}
 
-	msgBus := bus.NewMessageBus()
-	agentLoop := agent.NewAgentLoop(cfg, msgBus, provider)
+	mainBus := bus.NewMessageBus()
+	agentBus := bus.NewMessageBus()
+	agentLoop := agent.NewAgentLoop(cfg, agentBus, provider)
 
 	// Print agent startup info
 	fmt.Println("\n📦 Agent Status:")
@@ -77,14 +79,14 @@ func gatewayCmd() {
 
 	// Setup cron tool and service
 	execTimeout := time.Duration(cfg.Tools.Cron.ExecTimeoutMinutes) * time.Minute
-	cronService := setupCronTool(agentLoop, msgBus, cfg.WorkspacePath(), cfg.Agents.Defaults.RestrictToWorkspace, execTimeout, cfg)
+	cronService := setupCronTool(agentLoop, mainBus, cfg.WorkspacePath(), cfg.Agents.Defaults.RestrictToWorkspace, execTimeout, cfg)
 
 	heartbeatService := heartbeat.NewHeartbeatService(
 		cfg.WorkspacePath(),
 		cfg.Heartbeat.Interval,
 		cfg.Heartbeat.Enabled,
 	)
-	heartbeatService.SetBus(msgBus)
+	heartbeatService.SetBus(mainBus)
 	heartbeatService.SetHandler(func(prompt, channel, chatID string) *tools.ToolResult {
 		// Use cli:direct as fallback if no valid channel
 		if channel == "" || chatID == "" {
@@ -103,14 +105,12 @@ func gatewayCmd() {
 		return tools.SilentResult(response)
 	})
 
-	channelManager, err := channels.NewManager(cfg, msgBus)
+	channelManager, err := channels.NewManager(cfg, mainBus)
 	if err != nil {
 		fmt.Printf("Error creating channel manager: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Inject channel manager into agent loop for command handling
-	agentLoop.SetChannelManager(channelManager)
 
 	var transcriber *voice.GroqTranscriber
 	if cfg.Providers.Groq.APIKey != "" {
@@ -167,7 +167,7 @@ func gatewayCmd() {
 		Enabled:    cfg.Devices.Enabled,
 		MonitorUSB: cfg.Devices.MonitorUSB,
 	}, stateManager)
-	deviceService.SetBus(msgBus)
+	deviceService.SetBus(mainBus)
 	if err := deviceService.Start(ctx); err != nil {
 		fmt.Printf("Error starting device service: %v\n", err)
 	} else if cfg.Devices.Enabled {
@@ -185,6 +185,10 @@ func gatewayCmd() {
 		}
 	}()
 	fmt.Printf("✓ Health endpoints available at http://%s:%d/health and /ready\n", cfg.Gateway.Host, cfg.Gateway.Port)
+
+
+	gw := gateway.NewCommandGateway(mainBus, agentBus, channelManager, agentLoop.GetRegistry())
+	go gw.Run(ctx)
 
 	go agentLoop.Run(ctx)
 
