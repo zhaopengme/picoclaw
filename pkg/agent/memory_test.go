@@ -103,3 +103,17 @@ func TestMigrateLegacyUserMD(t *testing.T) {
 		t.Errorf("USER.md.bak should exist")
 	}
 }
+
+func TestNewMemoryStore_AutoMigrates(t *testing.T) {
+	tempDir := t.TempDir()
+	userMDPath := filepath.Join(tempDir, "USER.md")
+	os.WriteFile(userMDPath, []byte("auto migrate me"), 0644)
+
+	// Instantiating should trigger migration automatically
+	ms := NewMemoryStore(tempDir)
+
+	profile := ms.ReadProfile()
+	if profile["legacy_user_preferences"] != "auto migrate me" {
+		t.Errorf("NewMemoryStore did not auto-migrate USER.md")
+	}
+}

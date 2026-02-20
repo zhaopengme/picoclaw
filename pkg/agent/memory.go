@@ -34,11 +34,16 @@ func NewMemoryStore(workspace string) *MemoryStore {
 	// Ensure memory directory exists
 	os.MkdirAll(memoryDir, 0755)
 
-	return &MemoryStore{
+	ms := &MemoryStore{
 		workspace:   workspace,
 		memoryDir:   memoryDir,
 		profileFile: profileFile,
 	}
+
+	// Auto-migrate legacy user preferences
+	_ = ms.MigrateLegacyUserMD()
+
+	return ms
 }
 
 // getTodayFile returns the path to today's daily note file (memory/YYYYMM/YYYYMMDD.md).
