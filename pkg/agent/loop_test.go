@@ -35,7 +35,7 @@ func TestRecordLastChannel(t *testing.T) {
 	}
 
 	// Create agent loop
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -80,7 +80,7 @@ func TestRecordLastChatID(t *testing.T) {
 	}
 
 	// Create agent loop
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -125,7 +125,7 @@ func TestNewAgentLoop_StateInitialized(t *testing.T) {
 	}
 
 	// Create agent loop
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -160,7 +160,7 @@ func TestToolRegistry_ToolRegistration(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -206,7 +206,7 @@ func TestToolContext_Updates(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &simpleMockProvider{response: "OK"}
 	_ = NewAgentLoop(cfg, msgBus, provider)
 
@@ -237,7 +237,7 @@ func TestToolRegistry_GetDefinitions(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -281,7 +281,7 @@ func TestAgentLoop_GetStartupInfo(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -328,7 +328,7 @@ func TestAgentLoop_Stop(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &mockProvider{}
 	al := NewAgentLoop(cfg, msgBus, provider)
 
@@ -450,7 +450,7 @@ func TestToolResult_SilentToolDoesNotSendUserMessage(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &simpleMockProvider{response: "File operation complete"}
 	al := NewAgentLoop(cfg, msgBus, provider)
 	helper := testHelper{al: al}
@@ -492,7 +492,7 @@ func TestToolResult_UserFacingToolDoesSendMessage(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 	provider := &simpleMockProvider{response: "Command output: hello world"}
 	al := NewAgentLoop(cfg, msgBus, provider)
 	helper := testHelper{al: al}
@@ -557,7 +557,7 @@ func TestAgentLoop_ContextExhaustionRetry(t *testing.T) {
 		},
 	}
 
-	msgBus := bus.NewMessageBus()
+	msgBus := bus.NewBroker()
 
 	// Create a provider that fails once with a context error
 	contextErr := fmt.Errorf("InvalidParameter: Total tokens of image and text exceed max message tokens")

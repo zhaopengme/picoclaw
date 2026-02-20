@@ -27,7 +27,7 @@ type SubagentManager struct {
 	mu             sync.RWMutex
 	provider       providers.LLMProvider
 	defaultModel   string
-	bus            *bus.MessageBus
+	bus            bus.Broker
 	workspace      string
 	tools          *ToolRegistry
 	maxIterations  int
@@ -38,7 +38,7 @@ type SubagentManager struct {
 	nextID         int
 }
 
-func NewSubagentManager(provider providers.LLMProvider, defaultModel, workspace string, bus *bus.MessageBus) *SubagentManager {
+func NewSubagentManager(provider providers.LLMProvider, defaultModel, workspace string, bus bus.Broker) *SubagentManager {
 	return &SubagentManager{
 		tasks:         make(map[string]*SubagentTask),
 		provider:      provider,

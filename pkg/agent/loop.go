@@ -30,7 +30,7 @@ import (
 )
 
 type AgentLoop struct {
-	bus            *bus.MessageBus
+	bus            bus.Broker
 	cfg            *config.Config
 	registry       *AgentRegistry
 	state          *state.Manager
@@ -52,7 +52,7 @@ type processOptions struct {
 	NoHistory       bool   // If true, don't load session history (for heartbeat)
 }
 
-func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers.LLMProvider) *AgentLoop {
+func NewAgentLoop(cfg *config.Config, msgBus bus.Broker, provider providers.LLMProvider) *AgentLoop {
 	registry := NewAgentRegistry(cfg, provider)
 
 	// Register shared tools to all agents
@@ -80,7 +80,7 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 }
 
 // registerSharedTools registers tools that are shared across all agents (web, message, spawn).
-func registerSharedTools(cfg *config.Config, msgBus *bus.MessageBus, registry *AgentRegistry, provider providers.LLMProvider) {
+func registerSharedTools(cfg *config.Config, msgBus bus.Broker, registry *AgentRegistry, provider providers.LLMProvider) {
 	for _, agentID := range registry.ListAgentIDs() {
 		agent, ok := registry.GetAgent(agentID)
 		if !ok {

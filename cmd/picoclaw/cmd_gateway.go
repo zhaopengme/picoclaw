@@ -203,7 +203,7 @@ func gatewayCmd() {
 	fmt.Println("✓ Gateway stopped")
 }
 
-func setupCronTool(agentLoop *agent.AgentLoop, msgBus *bus.MessageBus, workspace string, restrict bool, execTimeout time.Duration, cfg *config.Config) *cron.CronService {
+func setupCronTool(agentLoop *agent.AgentLoop, msgBus bus.Broker, workspace string, restrict bool, execTimeout time.Duration, cfg *config.Config) *cron.CronService {
 	cronStorePath := filepath.Join(workspace, "cron", "jobs.json")
 
 	// Create cron service

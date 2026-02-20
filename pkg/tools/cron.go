@@ -21,7 +21,7 @@ type JobExecutor interface {
 type CronTool struct {
 	cronService *cron.CronService
 	executor    JobExecutor
-	msgBus      *bus.MessageBus
+	msgBus      bus.Broker
 	execTool    *ExecTool
 	channel     string
 	chatID      string
@@ -30,7 +30,7 @@ type CronTool struct {
 
 // NewCronTool creates a new CronTool
 // execTimeout: 0 means no timeout, >0 sets the timeout duration
-func NewCronTool(cronService *cron.CronService, executor JobExecutor, msgBus *bus.MessageBus, workspace string, restrict bool, execTimeout time.Duration, config *config.Config) *CronTool {
+func NewCronTool(cronService *cron.CronService, executor JobExecutor, msgBus bus.Broker, workspace string, restrict bool, execTimeout time.Duration, config *config.Config) *CronTool {
 	execTool := NewExecToolWithConfig(workspace, restrict, config)
 	execTool.SetTimeout(execTimeout)
 	return &CronTool{
