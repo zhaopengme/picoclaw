@@ -537,8 +537,11 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 
 		// Retry loop for context/token errors
 		maxRetries := 2
+		var llmDuration time.Duration
 		for retry := 0; retry <= maxRetries; retry++ {
+			startTime := time.Now()
 			response, err = callLLM()
+			llmDuration = time.Since(startTime)
 			if err == nil {
 				break
 			}
@@ -581,6 +584,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 					"agent_id":  agent.ID,
 					"iteration": iteration,
 					"error":     err.Error(),
+					"duration_ms": llmDuration.Milliseconds(),
 				})
 			return "", iteration, fmt.Errorf("LLM call failed after retries: %w", err)
 		}
@@ -593,6 +597,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 					"agent_id":      agent.ID,
 					"iteration":     iteration,
 					"content_chars": len(finalContent),
+					"duration_ms": llmDuration.Milliseconds(),
 				})
 			break
 		}
@@ -613,6 +618,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 				"tools":     toolNames,
 				"count":     len(normalizedToolCalls),
 				"iteration": iteration,
+				"duration_ms": llmDuration.Milliseconds(),
 			})
 
 		// Build assistant message with tool calls
