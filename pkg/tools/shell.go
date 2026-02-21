@@ -201,22 +201,32 @@ func (t *ExecTool) Execute(ctx context.Context, args map[string]interface{}) *To
 	var recentLogs []string
 	var logsMu sync.Mutex
 
-	// Helper to read pipe
+	// Helper to read pipe safely without line length limits
 	readPipe := func(pipe io.Reader, buf *bytes.Buffer, isErr bool) {
-		scanner := bufio.NewScanner(pipe)
-		for scanner.Scan() {
-			line := scanner.Text()
-			buf.WriteString(line + "\n")
-
-			if t.progressCb != nil {
-				logsMu.Lock()
-				recentLogs = append(recentLogs, line)
-				if len(recentLogs) > 15 {
-					recentLogs = recentLogs[len(recentLogs)-15:]
+		reader := bufio.NewReader(pipe)
+		for {
+			lineBytes, err := reader.ReadBytes('\n')
+			if len(lineBytes) > 0 {
+				buf.Write(lineBytes)
+				
+				if t.progressCb != nil {
+					lineStr := string(bytes.TrimRight(lineBytes, "\r\n"))
+					logsMu.Lock()
+					recentLogs = append(recentLogs, lineStr)
+					if len(recentLogs) > 15 {
+						recentLogs = recentLogs[len(recentLogs)-15:]
+					}
+					logStr := strings.Join(recentLogs, "\n")
+					logsMu.Unlock()
+					t.progressCb(logStr)
 				}
-				logStr := strings.Join(recentLogs, "\n")
-				logsMu.Unlock()
-				t.progressCb(logStr)
+			}
+			if err != nil {
+				// io.EOF is expected at end of stream
+				if err != io.EOF {
+					buf.WriteString(fmt.Sprintf("\n[Read Error: %v]\n", err))
+				}
+				break
 			}
 		}
 	}
