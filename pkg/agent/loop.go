@@ -654,6 +654,22 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 		// Save assistant message with tool calls to session
 		agent.Sessions.AddFullMessage(opts.SessionKey, assistantMsg)
 
+		// Broadcast status update to channel before running potentially slow tools
+		if len(normalizedToolCalls) > 0 && !constants.IsInternalChannel(opts.Channel) {
+			var toolNamesDisplay []string
+			for _, tc := range normalizedToolCalls {
+				toolNamesDisplay = append(toolNamesDisplay, tc.Name)
+			}
+
+			statusMsg := fmt.Sprintf("⚙️ 正在执行: %s...", strings.Join(toolNamesDisplay, ", "))
+			al.bus.PublishOutbound(bus.OutboundMessage{
+				Channel:  opts.Channel,
+				ChatID:   opts.ChatID,
+				Content:  statusMsg,
+				Metadata: map[string]string{"status_update": "true"},
+			})
+		}
+
 		// Execute tool calls
 		for _, tc := range normalizedToolCalls {
 			argsJSON, _ := json.Marshal(tc.Arguments)
