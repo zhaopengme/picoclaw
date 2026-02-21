@@ -35,13 +35,13 @@ func (r *ToolRegistry) Get(name string) (Tool, bool) {
 }
 
 func (r *ToolRegistry) Execute(ctx context.Context, name string, args map[string]interface{}) *ToolResult {
-	return r.ExecuteWithContext(ctx, name, args, "", "", nil)
+	return r.ExecuteWithContext(ctx, name, args, "", "", nil, nil)
 }
 
 // ExecuteWithContext executes a tool with channel/chatID context and optional async callback.
 // If the tool implements AsyncTool and a non-nil callback is provided,
 // the callback will be set on the tool before execution.
-func (r *ToolRegistry) ExecuteWithContext(ctx context.Context, name string, args map[string]interface{}, channel, chatID string, asyncCallback AsyncCallback) *ToolResult {
+func (r *ToolRegistry) ExecuteWithContext(ctx context.Context, name string, args map[string]interface{}, channel, chatID string, asyncCallback AsyncCallback, progressCallback ProgressCallback) *ToolResult {
 	logger.InfoCF("tool", "Tool execution started",
 		map[string]interface{}{
 			"tool": name,
@@ -69,6 +69,12 @@ func (r *ToolRegistry) ExecuteWithContext(ctx context.Context, name string, args
 			map[string]interface{}{
 				"tool": name,
 			})
+	}
+
+	// If tool implements ProgressTool and callback is provided, set callback
+	if progTool, ok := tool.(ProgressTool); ok && progressCallback != nil {
+		progTool.SetProgressCallback(progressCallback)
+		logger.DebugCF("tool", "Progress callback injected", map[string]interface{}{"tool": name})
 	}
 
 	start := time.Now()
