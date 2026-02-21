@@ -188,7 +188,7 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 					ParseMode: telego.ModeHTML,
 				}
 
-				if _, err = c.bot.EditMessageText(ctx, editMsg); err == nil {
+				if _, err = c.bot.EditMessageText(ctx, editMsg); err == nil || strings.Contains(err.Error(), "message is not modified") {
 					continue // 如果第一条替换成功，直接处理下一个分段
 				}
 
