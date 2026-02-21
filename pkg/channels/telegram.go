@@ -147,17 +147,21 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		return fmt.Errorf("telegram bot not running")
 	}
 
+	isStatusUpdate := msg.Metadata != nil && msg.Metadata["status_update"] == "true"
+
 	chatID, threadID, err := parseCompositeChatID(msg.ChatID)
 	if err != nil {
 		return fmt.Errorf("invalid chat ID: %w", err)
 	}
 
 	// 取消思考动画
-	if stop, ok := c.stopThinking.Load(msg.ChatID); ok {
-		if cf, ok := stop.(*thinkingCancel); ok && cf != nil {
-			cf.Cancel()
+	if !isStatusUpdate {
+		if stop, ok := c.stopThinking.Load(msg.ChatID); ok {
+			if cf, ok := stop.(*thinkingCancel); ok && cf != nil {
+				cf.Cancel()
+			}
+			c.stopThinking.Delete(msg.ChatID)
 		}
-		c.stopThinking.Delete(msg.ChatID)
 	}
 
 	// 将长 Markdown 文本拆分为多个长度安全的块 (Telegram 最大限制是 4096 字符)
@@ -171,7 +175,11 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		// 第一段消息，尝试替换掉之前的 Thinking placeholder
 		if i == 0 {
 			if pID, ok := c.placeholders.Load(msg.ChatID); ok {
-				c.placeholders.Delete(msg.ChatID)
+				// Only remove the placeholder if this is the final message,
+				// allowing status updates to reuse the same bubble multiple times.
+				if !isStatusUpdate {
+					c.placeholders.Delete(msg.ChatID)
+				}
 
 				editMsg := &telego.EditMessageTextParams{
 					ChatID:    tu.ID(chatID),
@@ -183,7 +191,11 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 				if _, err = c.bot.EditMessageText(ctx, editMsg); err == nil {
 					continue // 如果第一条替换成功，直接处理下一个分段
 				}
-				// 如果替换失败，降级为发送新消息
+
+				// 如果替换失败，降级为发送新消息，并清理失效的 placeholder
+				if err != nil {
+					c.placeholders.Delete(msg.ChatID)
+				}
 			}
 		}
 
