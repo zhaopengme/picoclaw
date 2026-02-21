@@ -698,7 +698,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 			}
 
 			// Create progress callback with debouncing
-			var lastUpdate time.Time
+			lastUpdate := time.Now()
 			var mu sync.Mutex
 
 			progressCallback := func(content string) {

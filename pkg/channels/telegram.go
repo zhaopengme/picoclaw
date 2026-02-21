@@ -194,7 +194,15 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 
 				// 如果替换失败，降级为发送新消息，并清理失效的 placeholder
 				if err != nil {
-					c.placeholders.Delete(msg.ChatID)
+					// Don't delete placeholder on transient errors during status updates (like 429 Too Many Requests)
+					// otherwise all subsequent status updates will spawn new messages.
+					if !isStatusUpdate {
+						c.placeholders.Delete(msg.ChatID)
+					} else {
+						// For status updates, if it fails (e.g. rate limit, unparseable HTML), we just skip this update
+						// and keep the placeholder for the next update instead of falling back to a new message.
+						continue
+					}
 				}
 			}
 		}

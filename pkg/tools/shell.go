@@ -286,7 +286,9 @@ func (t *ExecTool) guardCommand(command, cwd string) string {
 
 	for _, pattern := range t.denyPatterns {
 		if pattern.MatchString(lower) {
-			return "Command blocked by safety guard (dangerous pattern detected)"
+			errMsg := fmt.Sprintf("Command blocked by safety guard (dangerous pattern detected: %q matched %v)", command, pattern.String())
+			fmt.Println("[SafetyGuard]", errMsg)
+			return errMsg
 		}
 	}
 
@@ -299,13 +301,15 @@ func (t *ExecTool) guardCommand(command, cwd string) string {
 			}
 		}
 		if !allowed {
-			return "Command blocked by safety guard (not in allowlist)"
+			errMsg := fmt.Sprintf("Command blocked by safety guard (not in allowlist): %q", command)
+			return errMsg
 		}
 	}
 
 	if t.restrictToWorkspace {
 		if strings.Contains(cmd, "..\\") || strings.Contains(cmd, "../") {
-			return "Command blocked by safety guard (path traversal detected)"
+			errMsg := fmt.Sprintf("Command blocked by safety guard (path traversal detected): %q", command)
+			return errMsg
 		}
 
 		cwdPath, err := filepath.Abs(cwd)
@@ -329,7 +333,8 @@ func (t *ExecTool) guardCommand(command, cwd string) string {
 			}
 
 			if strings.HasPrefix(rel, "..") {
-				return "Command blocked by safety guard (path outside working dir)"
+				errMsg := fmt.Sprintf("Command blocked by safety guard (path %q is outside working dir %q): %q", p, cwdPath, command)
+				return errMsg
 			}
 		}
 	}
