@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -224,12 +225,21 @@ func sanitizeHistoryForProvider(history []providers.Message) []providers.Message
 				logger.DebugCF("agent", "Dropping orphaned leading tool message", map[string]interface{}{})
 				continue
 			}
-			last := sanitized[len(sanitized)-1]
-			if last.Role != "assistant" || len(last.ToolCalls) == 0 {
-				if last.Role != "tool" {
-					logger.DebugCF("agent", "Dropping orphaned tool message", map[string]interface{}{})
+			// Walk backwards to find the nearest non-tool message and verify
+			// it is an assistant message with tool calls.
+			hasValidAncestor := false
+			for k := len(sanitized) - 1; k >= 0; k-- {
+				if sanitized[k].Role == "tool" {
 					continue
 				}
+				if sanitized[k].Role == "assistant" && len(sanitized[k].ToolCalls) > 0 {
+					hasValidAncestor = true
+				}
+				break
+			}
+			if !hasValidAncestor {
+				logger.DebugCF("agent", "Dropping orphaned tool message", map[string]interface{}{})
+				continue
 			}
 			sanitized = append(sanitized, msg)
 
@@ -291,6 +301,7 @@ func sanitizeHistoryForProvider(history []providers.Message) []providers.Message
 				missingIDs = append(missingIDs, id)
 			}
 		}
+		sort.Strings(missingIDs)
 
 		if allPresent {
 			// Complete turn: keep assistant + all tool responses.
