@@ -1,17 +1,19 @@
 package tools
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
-
 	"github.com/zhaopengme/mobaiclaw/pkg/config"
 )
 
@@ -21,6 +23,7 @@ type ExecTool struct {
 	denyPatterns        []*regexp.Regexp
 	allowPatterns       []*regexp.Regexp
 	restrictToWorkspace bool
+	progressCb          ProgressCallback
 }
 
 var defaultDenyPatterns = []*regexp.Regexp{
@@ -110,6 +113,10 @@ func NewExecToolWithConfig(workingDir string, restrict bool, config *config.Conf
 	}
 }
 
+func (t *ExecTool) SetProgressCallback(cb ProgressCallback) {
+	t.progressCb = cb
+}
+
 func (t *ExecTool) Name() string {
 	return "exec"
 }
@@ -177,14 +184,54 @@ func (t *ExecTool) Execute(ctx context.Context, args map[string]interface{}) *To
 		cmd.Dir = cwd
 	}
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return ErrorResult(fmt.Sprintf("failed to get stdout pipe: %v", err))
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return ErrorResult(fmt.Sprintf("failed to get stderr pipe: %v", err))
+	}
 
-	err := cmd.Run()
-	output := stdout.String()
-	if stderr.Len() > 0 {
-		output += "\nSTDERR:\n" + stderr.String()
+	if err := cmd.Start(); err != nil {
+		return ErrorResult(fmt.Sprintf("failed to start command: %v", err))
+	}
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	var recentLogs []string
+	var logsMu sync.Mutex
+
+	// Helper to read pipe
+	readPipe := func(pipe io.Reader, buf *bytes.Buffer, isErr bool) {
+		scanner := bufio.NewScanner(pipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			buf.WriteString(line + "\n")
+
+			if t.progressCb != nil {
+				logsMu.Lock()
+				recentLogs = append(recentLogs, line)
+				if len(recentLogs) > 15 {
+					recentLogs = recentLogs[len(recentLogs)-15:]
+				}
+				logStr := strings.Join(recentLogs, "\n")
+				logsMu.Unlock()
+				t.progressCb(logStr)
+			}
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); readPipe(stdoutPipe, &stdoutBuf, false) }()
+	go func() { defer wg.Done(); readPipe(stderrPipe, &stderrBuf, true) }()
+
+	wg.Wait()
+	err = cmd.Wait()
+
+	output := stdoutBuf.String()
+	if stderrBuf.Len() > 0 {
+		output += "\nSTDERR:\n" + stderrBuf.String()
 	}
 
 	if err != nil {
