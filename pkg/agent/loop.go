@@ -658,7 +658,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 		if len(normalizedToolCalls) > 0 && !constants.IsInternalChannel(opts.Channel) {
 			var toolNamesDisplay []string
 			for _, tc := range normalizedToolCalls {
-				toolNamesDisplay = append(toolNamesDisplay, tc.Name)
+				toolNamesDisplay = append(toolNamesDisplay, formatToolCallDisplay(tc))
 			}
 
 			statusMsg := fmt.Sprintf("⚙️ 正在执行: %s...", strings.Join(toolNamesDisplay, ", "))
@@ -711,7 +711,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 
 				// Debounce: max 1 update every 2 seconds to avoid Telegram rate limits
 				if time.Since(lastUpdate) > 2*time.Second {
-					statusMsg := fmt.Sprintf("⚙️ 正在执行: %s...\n\n<pre>%s</pre>", tc.Name, content)
+					statusMsg := fmt.Sprintf("⚙️ 正在执行: %s...\n\n<pre>%s</pre>", formatToolCallDisplay(tc), content)
 					al.bus.PublishOutbound(bus.OutboundMessage{
 						Channel:  opts.Channel,
 						ChatID:   opts.ChatID,
@@ -1079,4 +1079,29 @@ func extractParentPeer(msg bus.InboundMessage) *routing.RoutePeer {
 // GetRegistry returns the agent registry for external usage.
 func (al *AgentLoop) GetRegistry() *AgentRegistry {
 	return al.registry
+}
+
+
+// formatToolCallDisplay formats a tool call for UI display, extracting key arguments
+func formatToolCallDisplay(tc providers.ToolCall) string {
+	if tc.Name == "exec" {
+		if cmd, ok := tc.Arguments["command"].(string); ok {
+			// Clean up newlines for display
+			cmd = strings.ReplaceAll(cmd, "\n", " ")
+			if len(cmd) > 40 {
+				cmd = cmd[:37] + "..."
+			}
+			return fmt.Sprintf("%s(`%s`)", tc.Name, cmd)
+		}
+	}
+	
+	// Fallback for other tools: show a brief JSON snippet
+	argsJSON, err := json.Marshal(tc.Arguments)
+	if err == nil && len(argsJSON) > 2 && len(argsJSON) < 60 {
+		return fmt.Sprintf("%s(%s)", tc.Name, string(argsJSON))
+	} else if err == nil && len(argsJSON) >= 60 {
+		return fmt.Sprintf("%s(%s...)", tc.Name, string(argsJSON[:50]))
+	}
+	
+	return tc.Name
 }
