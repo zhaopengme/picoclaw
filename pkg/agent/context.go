@@ -215,6 +215,7 @@ func sanitizeHistoryForProvider(history []providers.Message) []providers.Message
 		return history
 	}
 
+	// Pass 1: Remove orphaned tool messages and invalid assistant tool-call turns.
 	sanitized := make([]providers.Message, 0, len(history))
 	for _, msg := range history {
 		switch msg.Role {
@@ -225,8 +226,10 @@ func sanitizeHistoryForProvider(history []providers.Message) []providers.Message
 			}
 			last := sanitized[len(sanitized)-1]
 			if last.Role != "assistant" || len(last.ToolCalls) == 0 {
-				logger.DebugCF("agent", "Dropping orphaned tool message", map[string]interface{}{})
-				continue
+				if last.Role != "tool" {
+					logger.DebugCF("agent", "Dropping orphaned tool message", map[string]interface{}{})
+					continue
+				}
 			}
 			sanitized = append(sanitized, msg)
 
@@ -249,7 +252,59 @@ func sanitizeHistoryForProvider(history []providers.Message) []providers.Message
 		}
 	}
 
-	return sanitized
+	// Pass 2: Verify that every tool_call_id in assistant messages has a
+	// matching tool response. If any are missing, drop the entire turn
+	// (assistant message + its partial tool responses).
+	result := make([]providers.Message, 0, len(sanitized))
+	i := 0
+	for i < len(sanitized) {
+		msg := sanitized[i]
+
+		// Non-assistant or assistant without tool_calls: keep as-is.
+		if msg.Role != "assistant" || len(msg.ToolCalls) == 0 {
+			result = append(result, msg)
+			i++
+			continue
+		}
+
+		// Collect expected tool_call_ids from this assistant message.
+		expectedIDs := make(map[string]bool, len(msg.ToolCalls))
+		for _, tc := range msg.ToolCalls {
+			expectedIDs[tc.ID] = false
+		}
+
+		// Look ahead to collect tool response messages that belong to this turn.
+		j := i + 1
+		for j < len(sanitized) && sanitized[j].Role == "tool" {
+			if _, ok := expectedIDs[sanitized[j].ToolCallID]; ok {
+				expectedIDs[sanitized[j].ToolCallID] = true
+			}
+			j++
+		}
+
+		// Check if all tool_call_ids have responses.
+		allPresent := true
+		var missingIDs []string
+		for id, found := range expectedIDs {
+			if !found {
+				allPresent = false
+				missingIDs = append(missingIDs, id)
+			}
+		}
+
+		if allPresent {
+			// Complete turn: keep assistant + all tool responses.
+			result = append(result, sanitized[i:j]...)
+		} else {
+			logger.WarnCF("agent", "Dropping incomplete tool-call turn", map[string]interface{}{
+				"missing_ids": missingIDs,
+				"total_calls": len(expectedIDs),
+			})
+		}
+		i = j
+	}
+
+	return result
 }
 
 func (cb *ContextBuilder) AddToolResult(messages []providers.Message, toolCallID, toolName, result string) []providers.Message {
