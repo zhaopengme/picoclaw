@@ -697,7 +697,32 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 				}
 			}
 
-			toolResult := agent.Tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, opts.Channel, opts.ChatID, asyncCallback, nil)
+						// Create progress callback with debouncing
+			var lastUpdate time.Time
+			var mu sync.Mutex
+
+			progressCallback := func(content string) {
+				if constants.IsInternalChannel(opts.Channel) {
+					return
+				}
+
+				mu.Lock()
+				defer mu.Unlock()
+
+				// Debounce: max 1 update every 2 seconds to avoid Telegram rate limits
+				if time.Since(lastUpdate) > 2*time.Second {
+					statusMsg := fmt.Sprintf("⚙️ 正在执行: %s...\n\n<pre>%s</pre>", tc.Name, content)
+					al.bus.PublishOutbound(bus.OutboundMessage{
+						Channel:  opts.Channel,
+						ChatID:   opts.ChatID,
+						Content:  statusMsg,
+						Metadata: map[string]string{"status_update": "true"},
+					})
+					lastUpdate = time.Now()
+				}
+			}
+
+			toolResult := agent.Tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, opts.Channel, opts.ChatID, asyncCallback, progressCallback)
 
 			// Send ForUser content to user immediately if not Silent
 			if !toolResult.Silent && toolResult.ForUser != "" && opts.SendResponse {
