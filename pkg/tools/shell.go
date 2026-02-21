@@ -256,10 +256,11 @@ func (t *ExecTool) guardCommand(command, cwd string) string {
 			return ""
 		}
 
-		pathPattern := regexp.MustCompile(`[A-Za-z]:\\[^\\\"']+|/[^\s\"']+`)
-		matches := pathPattern.FindAllString(cmd, -1)
+		pathPattern := regexp.MustCompile(`(?:^|\s|['"])([A-Za-z]:\\[^\s"']+|/[^\s"']+)`)
+		matches := pathPattern.FindAllStringSubmatch(cmd, -1)
 
-		for _, raw := range matches {
+		for _, match := range matches {
+			raw := match[1]
 			p, err := filepath.Abs(raw)
 			if err != nil {
 				continue
