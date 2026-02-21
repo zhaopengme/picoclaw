@@ -69,6 +69,17 @@ type AsyncTool interface {
 	SetCallback(cb AsyncCallback)
 }
 
+
+// ProgressCallback is a function type that tools can use to report real-time progress.
+type ProgressCallback func(content string)
+
+// ProgressTool is an optional interface that tools can implement to support
+// reporting real-time progress during execution.
+type ProgressTool interface {
+	Tool
+	SetProgressCallback(cb ProgressCallback)
+}
+
 func ToolToSchema(tool Tool) map[string]interface{} {
 	return map[string]interface{}{
 		"type": "function",
