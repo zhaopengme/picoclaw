@@ -213,8 +213,8 @@ func (t *ExecTool) Execute(ctx context.Context, args map[string]interface{}) *To
 					lineStr := string(bytes.TrimRight(lineBytes, "\r\n"))
 					logsMu.Lock()
 					recentLogs = append(recentLogs, lineStr)
-					if len(recentLogs) > 15 {
-						recentLogs = recentLogs[len(recentLogs)-15:]
+					if len(recentLogs) > 30 {
+						recentLogs = recentLogs[len(recentLogs)-30:]
 					}
 					logStr := strings.Join(recentLogs, "\n")
 					logsMu.Unlock()
