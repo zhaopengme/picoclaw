@@ -154,7 +154,7 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		return fmt.Errorf("invalid chat ID: %w", err)
 	}
 
-	// Stop thinking animation
+	// 取消思考动画
 	if stop, ok := c.stopThinking.Load(msg.ChatID); ok {
 		if cf, ok := stop.(*thinkingCancel); ok && cf != nil {
 			cf.Cancel()
@@ -162,44 +162,56 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 		c.stopThinking.Delete(msg.ChatID)
 	}
 
-	htmlContent := markdownToTelegramHTML(msg.Content)
+	// 将长 Markdown 文本拆分为多个长度安全的块 (Telegram 最大限制是 4096 字符)
+	// 我们预留一些余量，设置为 4000
+	chunks := splitMarkdownContent(msg.Content, 4000)
 
-	// Try to edit placeholder
-	if pID, ok := c.placeholders.Load(msg.ChatID); ok {
-		c.placeholders.Delete(msg.ChatID)
+	var lastErr error
+	for i, chunk := range chunks {
+		htmlContent := markdownToTelegramHTML(chunk)
 
-		editMsg := &telego.EditMessageTextParams{
+		// 第一段消息，尝试替换掉之前的 Thinking placeholder
+		if i == 0 {
+			if pID, ok := c.placeholders.Load(msg.ChatID); ok {
+				c.placeholders.Delete(msg.ChatID)
+
+				editMsg := &telego.EditMessageTextParams{
+					ChatID:    tu.ID(chatID),
+					MessageID: pID.(int),
+					Text:      htmlContent,
+					ParseMode: telego.ModeHTML,
+				}
+
+				if _, err = c.bot.EditMessageText(ctx, editMsg); err == nil {
+					continue // 如果第一条替换成功，直接处理下一个分段
+				}
+				// 如果替换失败，降级为发送新消息
+			}
+		}
+
+		tgMsg := &telego.SendMessageParams{
 			ChatID:    tu.ID(chatID),
-			MessageID: pID.(int),
 			Text:      htmlContent,
 			ParseMode: telego.ModeHTML,
 		}
-
-		if _, err = c.bot.EditMessageText(ctx, editMsg); err == nil {
-			return nil
+		if threadID != 0 {
+			tgMsg.MessageThreadID = threadID
 		}
-		// Fallback to new message if edit fails
+
+		if _, err = c.bot.SendMessage(ctx, tgMsg); err != nil {
+			logger.ErrorCF("telegram", "HTML parse failed or other error, falling back to plain text", map[string]interface{}{
+				"error":       err.Error(),
+				"chunk_index": i,
+			})
+			// HTML 解析失败时回退为纯文本再试一次
+			tgMsg.ParseMode = ""
+			if _, err = c.bot.SendMessage(ctx, tgMsg); err != nil {
+				lastErr = err // 记录最后一次错误，但继续尝试发送后续段落
+			}
+		}
 	}
 
-	tgMsg := &telego.SendMessageParams{
-		ChatID:    tu.ID(chatID),
-		Text:      htmlContent,
-		ParseMode: telego.ModeHTML,
-	}
-	if threadID != 0 {
-		tgMsg.MessageThreadID = threadID
-	}
-
-	if _, err = c.bot.SendMessage(ctx, tgMsg); err != nil {
-		logger.ErrorCF("telegram", "HTML parse failed, falling back to plain text", map[string]interface{}{
-			"error": err.Error(),
-		})
-		tgMsg.ParseMode = ""
-		_, err = c.bot.SendMessage(ctx, tgMsg)
-		return err
-	}
-
-	return nil
+	return lastErr
 }
 
 func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Message) error {
@@ -570,4 +582,67 @@ func escapeHTML(text string) string {
 	text = strings.ReplaceAll(text, "<", "&lt;")
 	text = strings.ReplaceAll(text, ">", "&gt;")
 	return text
+}
+
+// splitMarkdownContent 智能分割超长文本，尽量不破坏代码块
+func splitMarkdownContent(text string, maxLength int) []string {
+	if len(text) <= maxLength {
+		return []string{text}
+	}
+
+	var chunks []string
+	inCodeBlock := false
+	codeBlockLang := ""
+
+	lines := strings.Split(text, "\n")
+	var currentChunk strings.Builder
+	currentLen := 0
+
+	for _, line := range lines {
+		// 检查这行是否是代码块的开头或结尾
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			inCodeBlock = !inCodeBlock
+			if inCodeBlock {
+				// 记录代码块的语言，比如 ```go
+				codeBlockLang = strings.TrimPrefix(strings.TrimSpace(line), "```")
+			} else {
+				codeBlockLang = ""
+			}
+		}
+
+		// 如果加上这行代码会超过长度限制（预留一些字符给代码块补全标签）
+		lineLen := len(line) + 1 // +1 for newline
+		if currentLen+lineLen > maxLength-20 {
+			// 如果当前正在代码块内，先强行闭合代码块
+			if inCodeBlock {
+				currentChunk.WriteString("\n```")
+			}
+
+			// 保存当前这段
+			chunks = append(chunks, currentChunk.String())
+
+			// 开启新的一段
+			currentChunk.Reset()
+			currentLen = 0
+
+			// 如果之前在代码块内，新段落开头要补上代码块标记
+			if inCodeBlock {
+				currentChunk.WriteString("```" + codeBlockLang + "\n")
+				currentLen += len("```" + codeBlockLang + "\n")
+			}
+		}
+
+		if currentChunk.Len() > 0 {
+			currentChunk.WriteString("\n")
+			currentLen++
+		}
+		currentChunk.WriteString(line)
+		currentLen += len(line)
+	}
+
+	if currentChunk.Len() > 0 {
+		chunks = append(chunks, currentChunk.String())
+	}
+
+	return chunks
 }

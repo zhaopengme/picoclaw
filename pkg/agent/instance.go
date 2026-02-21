@@ -100,6 +100,22 @@ func NewAgentInstance(
 	}
 	candidates := providers.ResolveCandidates(modelCfg, defaults.Provider)
 
+	// Try to create a specific provider for this agent's model
+	agentProvider := provider // Fallback to the default provider
+	if cfg != nil && model != "" {
+		if modelCfg, err := cfg.GetModelConfig(model); err == nil {
+			if modelCfg.Workspace == "" {
+				modelCfg.Workspace = workspace
+			}
+			if p, _, err := providers.CreateProviderFromConfig(modelCfg); err == nil {
+				agentProvider = p
+			} else {
+				// We don't import logger here to avoid import cycle, or we could.
+				// Just fall back silently to the default provider for now.
+			}
+		}
+	}
+
 	return &AgentInstance{
 		ID:             agentID,
 		Name:           agentName,
@@ -110,7 +126,7 @@ func NewAgentInstance(
 		MaxTokens:      maxTokens,
 		Temperature:    temperature,
 		ContextWindow:  maxTokens,
-		Provider:       provider,
+		Provider:       agentProvider,
 		Sessions:       sessionsManager,
 		ContextBuilder: contextBuilder,
 		Tools:          toolsRegistry,

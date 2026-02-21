@@ -113,9 +113,12 @@ func (p *Provider) Chat(ctx context.Context, messages []Message, tools []ToolDef
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "KimiCLI/1.0")
 	if p.apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+p.apiKey)
 	}
+
+	log.Printf("[DEBUG] LLM Request: URL=%s, Model=%s, User-Agent=%s", req.URL.String(), model, req.Header.Get("User-Agent"))
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
