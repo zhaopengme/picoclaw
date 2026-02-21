@@ -905,8 +905,21 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 		part1 := validMessages[:mid]
 		part2 := validMessages[mid:]
 
-		s1, _ := al.summarizeBatch(ctx, agent, part1, "")
-		s2, _ := al.summarizeBatch(ctx, agent, part2, "")
+		var s1, s2 string
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			s1, _ = al.summarizeBatch(ctx, agent, part1, "")
+		}()
+
+		go func() {
+			defer wg.Done()
+			s2, _ = al.summarizeBatch(ctx, agent, part2, "")
+		}()
+
+		wg.Wait()
 
 		mergePrompt := fmt.Sprintf("Merge these two conversation summaries into one cohesive summary:\n\n1: %s\n\n2: %s", s1, s2)
 		resp, err := agent.Provider.Chat(ctx, []providers.Message{{Role: "user", Content: mergePrompt}}, nil, agent.Model, map[string]interface{}{
