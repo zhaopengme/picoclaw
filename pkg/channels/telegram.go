@@ -41,7 +41,6 @@ var (
 type TelegramChannel struct {
 	*BaseChannel
 	bot          *telego.Bot
-	commands     TelegramCommander
 	config       *config.Config
 	chatIDs      map[string]int64
 	transcriber  *voice.GroqTranscriber
@@ -91,7 +90,6 @@ func NewTelegramChannel(cfg *config.Config, bus bus.Broker) (*TelegramChannel, e
 
 	return &TelegramChannel{
 		BaseChannel:  base,
-		commands:     NewTelegramCommands(bot, cfg),
 		bot:          bot,
 		config:       cfg,
 		chatIDs:      make(map[string]int64),
