@@ -581,9 +581,9 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 		if err != nil {
 			logger.ErrorCF("agent", "LLM call failed",
 				map[string]interface{}{
-					"agent_id":  agent.ID,
-					"iteration": iteration,
-					"error":     err.Error(),
+					"agent_id":    agent.ID,
+					"iteration":   iteration,
+					"error":       err.Error(),
 					"duration_ms": llmDuration.Milliseconds(),
 				})
 			return "", iteration, fmt.Errorf("LLM call failed after retries: %w", err)
@@ -597,7 +597,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 					"agent_id":      agent.ID,
 					"iteration":     iteration,
 					"content_chars": len(finalContent),
-					"duration_ms": llmDuration.Milliseconds(),
+					"duration_ms":   llmDuration.Milliseconds(),
 				})
 			break
 		}
@@ -614,10 +614,10 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 		}
 		logger.InfoCF("agent", "LLM requested tool calls",
 			map[string]interface{}{
-				"agent_id":  agent.ID,
-				"tools":     toolNames,
-				"count":     len(normalizedToolCalls),
-				"iteration": iteration,
+				"agent_id":    agent.ID,
+				"tools":       toolNames,
+				"count":       len(normalizedToolCalls),
+				"iteration":   iteration,
 				"duration_ms": llmDuration.Milliseconds(),
 			})
 
@@ -697,7 +697,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 				}
 			}
 
-						// Create progress callback with debouncing
+			// Create progress callback with debouncing
 			var lastUpdate time.Time
 			var mu sync.Mutex
 
@@ -1081,7 +1081,6 @@ func (al *AgentLoop) GetRegistry() *AgentRegistry {
 	return al.registry
 }
 
-
 // formatToolCallDisplay formats a tool call for UI display, extracting key arguments
 func formatToolCallDisplay(tc providers.ToolCall) string {
 	if tc.Name == "exec" {
@@ -1094,7 +1093,7 @@ func formatToolCallDisplay(tc providers.ToolCall) string {
 			return fmt.Sprintf("%s(`%s`)", tc.Name, cmd)
 		}
 	}
-	
+
 	// Fallback for other tools: show a brief JSON snippet
 	argsJSON, err := json.Marshal(tc.Arguments)
 	if err == nil && len(argsJSON) > 2 && len(argsJSON) < 60 {
@@ -1102,6 +1101,6 @@ func formatToolCallDisplay(tc providers.ToolCall) string {
 	} else if err == nil && len(argsJSON) >= 60 {
 		return fmt.Sprintf("%s(%s...)", tc.Name, string(argsJSON[:50]))
 	}
-	
+
 	return tc.Name
 }

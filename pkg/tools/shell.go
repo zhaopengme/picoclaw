@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/zhaopengme/mobaiclaw/pkg/config"
 	"io"
 	"os"
 	"os/exec"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/zhaopengme/mobaiclaw/pkg/config"
 )
 
 type ExecTool struct {
@@ -208,7 +208,7 @@ func (t *ExecTool) Execute(ctx context.Context, args map[string]interface{}) *To
 			lineBytes, err := reader.ReadBytes('\n')
 			if len(lineBytes) > 0 {
 				buf.Write(lineBytes)
-				
+
 				if t.progressCb != nil {
 					lineStr := string(bytes.TrimRight(lineBytes, "\r\n"))
 					logsMu.Lock()
