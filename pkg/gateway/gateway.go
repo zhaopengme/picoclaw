@@ -8,6 +8,7 @@ import (
 	"github.com/zhaopengme/mobaiclaw/pkg/agent"
 	"github.com/zhaopengme/mobaiclaw/pkg/bus"
 	"github.com/zhaopengme/mobaiclaw/pkg/channels"
+	"github.com/zhaopengme/mobaiclaw/pkg/session"
 )
 
 type CommandGateway struct {
@@ -15,14 +16,16 @@ type CommandGateway struct {
 	channelManager *channels.Manager
 	agentBus       bus.Broker           // for forwarding to agent
 	agentRegistry  *agent.AgentRegistry // to fetch models
+	sessions       *session.SessionManager
 }
 
-func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry) *CommandGateway {
+func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry, sessions *session.SessionManager) *CommandGateway {
 	return &CommandGateway{
 		bus:            b,
 		agentBus:       agentBus,
 		channelManager: cm,
 		agentRegistry:  registry,
+		sessions:       sessions,
 	}
 }
 
