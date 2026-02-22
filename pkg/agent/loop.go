@@ -796,7 +796,7 @@ func (al *AgentLoop) maybeSummarize(agent *AgentInstance, sessionKey, channel, c
 	tokenEstimate := al.estimateTokens(newHistory)
 	threshold := agent.ContextWindow * 75 / 100
 
-	if len(newHistory) > 20 || tokenEstimate > threshold {
+	if tokenEstimate > threshold {
 		summarizeKey := agent.ID + ":" + sessionKey
 		if _, loading := al.summarizing.LoadOrStore(summarizeKey, true); !loading {
 			go func() {
@@ -964,10 +964,13 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 	omitted := false
 
 	for _, m := range toSummarize {
-		if m.Role != "user" && m.Role != "assistant" {
+		switch m.Role {
+		case "user", "assistant", "tool":
+			// include all conversation roles
+		default:
 			continue
 		}
-		msgTokens := len(m.Content) / 2
+		msgTokens := al.estimateTokens([]providers.Message{m})
 		if msgTokens > maxMessageTokens {
 			omitted = true
 			continue
@@ -992,7 +995,7 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 
 		go func() {
 			defer wg.Done()
-			s1, _ = al.summarizeBatch(ctx, agent, part1, "")
+			s1, _ = al.summarizeBatch(ctx, agent, part1, summary) // carry existing context into first batch
 		}()
 
 		go func() {
@@ -1002,25 +1005,51 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 
 		wg.Wait()
 
-		mergePrompt := fmt.Sprintf("Merge these two conversation summaries into one cohesive summary:\n\n1: %s\n\n2: %s", s1, s2)
-		resp, err := agent.Provider.Chat(ctx, []providers.Message{{Role: "user", Content: mergePrompt}}, nil, agent.Model, map[string]interface{}{
+		mergePrompt := fmt.Sprintf(
+			"Merge these two conversation summaries into one JSON object with fields: overview, scheduled_tasks, preferences, pending_actions, key_facts.\n"+
+				"Return ONLY the JSON object, no markdown fences, no other text.\n\nSummary 1: %s\n\nSummary 2: %s",
+			s1, s2,
+		)
+		summaryModel := agent.SummaryModel
+		if summaryModel == "" {
+			summaryModel = agent.Model
+		}
+		resp, err := agent.Provider.Chat(ctx, []providers.Message{{Role: "user", Content: mergePrompt}}, nil, summaryModel, map[string]interface{}{
 			"max_tokens":  1024,
 			"temperature": 0.3,
 		})
 		if err == nil {
 			finalSummary = resp.Content
 		} else {
-			finalSummary = s1 + " " + s2
+			// merge failed: use s1 which already carries the existing context
+			logger.WarnCF("agent", "Summary merge failed, falling back to part1 summary", map[string]interface{}{"error": err.Error()})
+			finalSummary = s1
 		}
 	} else {
 		finalSummary, _ = al.summarizeBatch(ctx, agent, validMessages, summary)
 	}
 
 	if omitted && finalSummary != "" {
-		finalSummary += "\n[Note: Some oversized messages were omitted from this summary for efficiency.]"
+		if cs, ok := parseSummary(finalSummary); ok {
+			if cs.Overview != "" {
+				cs.Overview += " [Note: some oversized messages were omitted.]"
+			} else {
+				cs.Overview = "[Note: some oversized messages were omitted.]"
+			}
+			if b, err := json.Marshal(cs); err == nil {
+				finalSummary = string(b)
+			}
+		}
 	}
 
 	if finalSummary != "" {
+		if _, ok := parseSummary(finalSummary); !ok {
+			logger.WarnCF("agent", "Summary is not valid JSON, discarding", map[string]interface{}{
+				"session_key": sessionKey,
+				"preview":     finalSummary[:min(len(finalSummary), 100)],
+			})
+			return
+		}
 		agent.Sessions.SetSummary(sessionKey, finalSummary)
 		agent.Sessions.TruncateHistory(sessionKey, 4)
 		agent.Sessions.Save(sessionKey)
@@ -1029,17 +1058,28 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 
 // summarizeBatch summarizes a batch of messages.
 func (al *AgentLoop) summarizeBatch(ctx context.Context, agent *AgentInstance, batch []providers.Message, existingSummary string) (string, error) {
-	prompt := "Provide a concise summary of this conversation segment, preserving core context and key points.\n" +
-		"IMPORTANT: Preserve any structured state such as: scheduled tasks/reminders created, user preferences stated, pending action items, and tool configurations discussed.\n"
-	if existingSummary != "" {
-		prompt += "Existing context: " + existingSummary + "\n"
+	prompt := "Summarize this conversation segment as a JSON object with these fields:\n" +
+		"- \"overview\": one paragraph of key context and outcomes\n" +
+		"- \"scheduled_tasks\": list of tasks/reminders created with IDs if known (empty array if none)\n" +
+		"- \"preferences\": user preferences and settings stated (empty array if none)\n" +
+		"- \"pending_actions\": items that need follow-up (empty array if none)\n" +
+		"- \"key_facts\": important facts established (empty array if none)\n" +
+		"Return ONLY the JSON object, no markdown fences, no other text.\n"
+	if cs, ok := parseSummary(existingSummary); ok {
+		prompt += "Existing context: " + renderSummaryText(cs) + "\n"
 	}
 	prompt += "\nCONVERSATION:\n"
 	for _, m := range batch {
-		prompt += fmt.Sprintf("%s: %s\n", m.Role, m.Content)
+		if text := messageToSummaryText(m); text != "" {
+			prompt += text + "\n"
+		}
 	}
 
-	response, err := agent.Provider.Chat(ctx, []providers.Message{{Role: "user", Content: prompt}}, nil, agent.Model, map[string]interface{}{
+	summaryModel := agent.SummaryModel
+	if summaryModel == "" {
+		summaryModel = agent.Model
+	}
+	response, err := agent.Provider.Chat(ctx, []providers.Message{{Role: "user", Content: prompt}}, nil, summaryModel, map[string]interface{}{
 		"max_tokens":  1024,
 		"temperature": 0.3,
 	})
@@ -1049,13 +1089,167 @@ func (al *AgentLoop) summarizeBatch(ctx context.Context, agent *AgentInstance, b
 	return response.Content, nil
 }
 
+// messageToSummaryText converts a message to a readable text line for summarization.
+// Tool calls and results are formatted to preserve intent without raw JSON noise.
+func messageToSummaryText(m providers.Message) string {
+	switch m.Role {
+	case "user":
+		if m.Content == "" {
+			return ""
+		}
+		return "user: " + m.Content
+
+	case "assistant":
+		var parts []string
+		if m.Content != "" {
+			parts = append(parts, m.Content)
+		}
+		for _, tc := range m.ToolCalls {
+			name := tc.Name
+			if name == "" && tc.Function != nil {
+				name = tc.Function.Name
+			}
+			args := ""
+			if tc.Function != nil && tc.Function.Arguments != "" {
+				args = tc.Function.Arguments
+			} else if len(tc.Arguments) > 0 {
+				if b, err := json.Marshal(tc.Arguments); err == nil {
+					args = string(b)
+				}
+			}
+			if argRunes := []rune(args); len(argRunes) > 200 {
+				args = string(argRunes[:200]) + "..."
+			}
+			parts = append(parts, fmt.Sprintf("[Tool Call: %s(%s)]", name, args))
+		}
+		if len(parts) == 0 {
+			return ""
+		}
+		return "assistant: " + strings.Join(parts, " ")
+
+	case "tool":
+		runes := []rune(m.Content)
+		if len(runes) > 300 {
+			runes = runes[:300]
+			return fmt.Sprintf("[Tool Result]: %s...", string(runes))
+		}
+		return fmt.Sprintf("[Tool Result]: %s", m.Content)
+
+	default:
+		return ""
+	}
+}
+
+// ConversationSummary is the structured format for conversation summaries.
+type ConversationSummary struct {
+	Overview       string   `json:"overview"`
+	ScheduledTasks []string `json:"scheduled_tasks,omitempty"`
+	Preferences    []string `json:"preferences,omitempty"`
+	PendingActions []string `json:"pending_actions,omitempty"`
+	KeyFacts       []string `json:"key_facts,omitempty"`
+}
+
+// parseSummary tries to parse a summary string as structured JSON.
+// Returns the parsed summary and true if successful, zero value and false otherwise.
+func parseSummary(s string) (ConversationSummary, bool) {
+	s = strings.TrimSpace(s)
+	// Strip markdown code fences if LLM wrapped in ```json ... ``` or ``` ... ```
+	if strings.HasPrefix(s, "```") && strings.HasSuffix(s, "```") && len(s) > 6 {
+		inner := s[3 : len(s)-3]
+		inner = strings.TrimSpace(inner)
+		// Remove optional language hint on the first line (e.g., "json")
+		if nl := strings.Index(inner, "\n"); nl >= 0 {
+			firstLine := strings.TrimSpace(inner[:nl])
+			if !strings.Contains(firstLine, "{") {
+				inner = strings.TrimSpace(inner[nl+1:])
+			}
+		}
+		s = inner
+	}
+	var cs ConversationSummary
+	if err := json.Unmarshal([]byte(s), &cs); err != nil {
+		return ConversationSummary{}, false
+	}
+	return cs, true
+}
+
+// renderSummaryText renders a ConversationSummary as plain text for LLM consumption (e.g., as existing context).
+func renderSummaryText(cs ConversationSummary) string {
+	var sb strings.Builder
+	if cs.Overview != "" {
+		sb.WriteString(cs.Overview)
+	}
+	if len(cs.ScheduledTasks) > 0 {
+		sb.WriteString("\nScheduled tasks: " + strings.Join(cs.ScheduledTasks, "; "))
+	}
+	if len(cs.Preferences) > 0 {
+		sb.WriteString("\nPreferences: " + strings.Join(cs.Preferences, "; "))
+	}
+	if len(cs.PendingActions) > 0 {
+		sb.WriteString("\nPending actions: " + strings.Join(cs.PendingActions, "; "))
+	}
+	if len(cs.KeyFacts) > 0 {
+		sb.WriteString("\nKey facts: " + strings.Join(cs.KeyFacts, "; "))
+	}
+	return sb.String()
+}
+
+// renderSummaryMarkdown renders a ConversationSummary as formatted markdown for the system prompt.
+func renderSummaryMarkdown(cs ConversationSummary) string {
+	var sb strings.Builder
+	if cs.Overview != "" {
+		sb.WriteString(cs.Overview + "\n")
+	}
+	if len(cs.ScheduledTasks) > 0 {
+		sb.WriteString("\n**Scheduled Tasks:**\n")
+		for _, t := range cs.ScheduledTasks {
+			sb.WriteString("- " + t + "\n")
+		}
+	}
+	if len(cs.Preferences) > 0 {
+		sb.WriteString("\n**User Preferences:**\n")
+		for _, p := range cs.Preferences {
+			sb.WriteString("- " + p + "\n")
+		}
+	}
+	if len(cs.PendingActions) > 0 {
+		sb.WriteString("\n**Pending Actions:**\n")
+		for _, a := range cs.PendingActions {
+			sb.WriteString("- " + a + "\n")
+		}
+	}
+	if len(cs.KeyFacts) > 0 {
+		sb.WriteString("\n**Key Facts:**\n")
+		for _, f := range cs.KeyFacts {
+			sb.WriteString("- " + f + "\n")
+		}
+	}
+	return strings.TrimSpace(sb.String())
+}
+
 // estimateTokens estimates the number of tokens in a message list.
 // Uses a safe heuristic of 2.5 characters per token to account for CJK and other
 // overheads better than the previous 3 chars/token.
+// Also accounts for tool call payloads (function name + arguments) which are
+// stored in ToolCalls rather than Content for assistant messages.
 func (al *AgentLoop) estimateTokens(messages []providers.Message) int {
 	totalChars := 0
 	for _, m := range messages {
 		totalChars += utf8.RuneCountInString(m.Content)
+		for _, tc := range m.ToolCalls {
+			// Count function name
+			if tc.Function != nil {
+				totalChars += utf8.RuneCountInString(tc.Function.Name)
+				totalChars += utf8.RuneCountInString(tc.Function.Arguments)
+			} else {
+				totalChars += utf8.RuneCountInString(tc.Name)
+				if len(tc.Arguments) > 0 {
+					if b, err := json.Marshal(tc.Arguments); err == nil {
+						totalChars += len(b)
+					}
+				}
+			}
+		}
 	}
 	// 2.5 chars per token = totalChars * 2 / 5
 	return totalChars * 2 / 5

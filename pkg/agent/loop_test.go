@@ -2,9 +2,11 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -613,3 +615,185 @@ func TestAgentLoop_ContextExhaustionRetry(t *testing.T) {
 		t.Errorf("Expected history to be compressed (len < 8), got %d", len(finalHistory))
 	}
 }
+
+// --- parseSummary tests ---
+
+func TestParseSummary_ValidJSON(t *testing.T) {
+	input := `{"overview":"test overview","scheduled_tasks":["task1"],"key_facts":["fact1"]}`
+	cs, ok := parseSummary(input)
+	if !ok {
+		t.Fatal("expected parseSummary to succeed")
+	}
+	if cs.Overview != "test overview" {
+		t.Errorf("Overview = %q, want 'test overview'", cs.Overview)
+	}
+	if len(cs.ScheduledTasks) != 1 || cs.ScheduledTasks[0] != "task1" {
+		t.Errorf("ScheduledTasks = %v", cs.ScheduledTasks)
+	}
+}
+
+func TestParseSummary_FencedWithLanguage(t *testing.T) {
+	input := "```json\n{\"overview\":\"fenced\"}\n```"
+	cs, ok := parseSummary(input)
+	if !ok {
+		t.Fatal("expected parseSummary to succeed for fenced JSON with language tag")
+	}
+	if cs.Overview != "fenced" {
+		t.Errorf("Overview = %q, want 'fenced'", cs.Overview)
+	}
+}
+
+func TestParseSummary_FencedWithoutLanguage(t *testing.T) {
+	input := "```\n{\"overview\":\"no lang\"}\n```"
+	cs, ok := parseSummary(input)
+	if !ok {
+		t.Fatal("expected parseSummary to succeed for fenced JSON without language tag")
+	}
+	if cs.Overview != "no lang" {
+		t.Errorf("Overview = %q, want 'no lang'", cs.Overview)
+	}
+}
+
+func TestParseSummary_PlainText(t *testing.T) {
+	_, ok := parseSummary("this is just plain text")
+	if ok {
+		t.Fatal("expected parseSummary to fail for plain text")
+	}
+}
+
+func TestParseSummary_Empty(t *testing.T) {
+	_, ok := parseSummary("")
+	if ok {
+		t.Fatal("expected parseSummary to fail for empty string")
+	}
+}
+
+// --- messageToSummaryText tests ---
+
+func TestMessageToSummaryText_User(t *testing.T) {
+	m := providers.Message{Role: "user", Content: "hello"}
+	if got := messageToSummaryText(m); got != "user: hello" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestMessageToSummaryText_UserEmpty(t *testing.T) {
+	m := providers.Message{Role: "user", Content: ""}
+	if got := messageToSummaryText(m); got != "" {
+		t.Errorf("expected empty, got %q", got)
+	}
+}
+
+func TestMessageToSummaryText_AssistantWithToolCall(t *testing.T) {
+	m := providers.Message{
+		Role: "assistant",
+		ToolCalls: []providers.ToolCall{
+			{Name: "cron", Arguments: map[string]interface{}{"action": "add"}},
+		},
+	}
+	got := messageToSummaryText(m)
+	if got == "" {
+		t.Fatal("expected non-empty result for assistant with tool call")
+	}
+	if !strings.Contains(got, "[Tool Call: cron(") {
+		t.Errorf("expected tool call format, got %q", got)
+	}
+}
+
+func TestMessageToSummaryText_AssistantEmpty(t *testing.T) {
+	m := providers.Message{Role: "assistant", Content: ""}
+	if got := messageToSummaryText(m); got != "" {
+		t.Errorf("expected empty for assistant with no content and no tool calls, got %q", got)
+	}
+}
+
+func TestMessageToSummaryText_ToolResult(t *testing.T) {
+	m := providers.Message{Role: "tool", Content: "result data"}
+	got := messageToSummaryText(m)
+	if got != "[Tool Result]: result data" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestMessageToSummaryText_ToolResultTruncated(t *testing.T) {
+	// Build a string longer than 300 runes using CJK characters
+	runes := make([]rune, 350)
+	for i := range runes {
+		runes[i] = '中'
+	}
+	m := providers.Message{Role: "tool", Content: string(runes)}
+	got := messageToSummaryText(m)
+	if !strings.Contains(got, "...") {
+		t.Error("expected truncation marker '...'")
+	}
+	// Resulting content part should be 300 runes + "..."
+	content := got[len("[Tool Result]: "):]
+	contentRunes := []rune(content)
+	if len(contentRunes) != 303 { // 300 + "..."
+		t.Errorf("truncated rune count = %d, want 303", len(contentRunes))
+	}
+}
+
+// --- estimateTokens tool call tests ---
+
+func TestEstimateTokens_CountsToolCallPayload(t *testing.T) {
+	al := &AgentLoop{}
+	withTool := []providers.Message{
+		{
+			Role: "assistant",
+			ToolCalls: []providers.ToolCall{
+				{Name: "cron", Arguments: map[string]interface{}{"action": "add", "message": "test"}},
+			},
+		},
+	}
+	withoutTool := []providers.Message{
+		{Role: "assistant", Content: ""},
+	}
+	if al.estimateTokens(withTool) <= al.estimateTokens(withoutTool) {
+		t.Error("estimateTokens should count higher for messages with ToolCalls")
+	}
+}
+
+// --- omitted note embedding tests ---
+
+func TestOmittedNoteEmbeddedInOverview(t *testing.T) {
+	// Simulate a valid JSON summary where omitted note should be appended to overview
+	input := `{"overview":"User scheduled a cron job.","scheduled_tasks":["Check weather every hour (ID: abc123)"]}`
+	cs, ok := parseSummary(input)
+	if !ok {
+		t.Fatal("parseSummary failed on valid input")
+	}
+	cs.Overview += " [Note: some oversized messages were omitted.]"
+	rendered := renderSummaryMarkdown(cs)
+	if !strings.Contains(rendered, "[Note: some oversized messages were omitted.]") {
+		t.Error("omitted note should appear in rendered markdown")
+	}
+	if !strings.Contains(rendered, "Check weather every hour") {
+		t.Error("scheduled task should still appear after note embedding")
+	}
+}
+
+func TestOmittedNotePreservesJSON(t *testing.T) {
+	input := `{"overview":"base","scheduled_tasks":["task1"]}`
+	cs, ok := parseSummary(input)
+	if !ok {
+		t.Fatal("parseSummary failed")
+	}
+	cs.Overview += " [Note: some oversized messages were omitted.]"
+	b, err := json.Marshal(cs)
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+	// Result must still be valid JSON parseable by parseSummary
+	cs2, ok2 := parseSummary(string(b))
+	if !ok2 {
+		t.Fatal("re-parsed summary after note embedding is not valid JSON")
+	}
+	if !strings.Contains(cs2.Overview, "[Note:") {
+		t.Error("note not preserved after round-trip")
+	}
+	if len(cs2.ScheduledTasks) != 1 {
+		t.Error("scheduled tasks lost after round-trip")
+	}
+}
+

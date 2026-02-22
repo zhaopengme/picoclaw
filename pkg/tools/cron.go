@@ -88,7 +88,7 @@ func (t *CronTool) Parameters() map[string]interface{} {
 			},
 			"deliver": map[string]interface{}{
 				"type":        "boolean",
-				"description": "If true (default), send message directly to channel without AI processing. If false, let agent process the message with AI. Use deliver=false for complex tasks that need AI reasoning. Not applicable when 'command' is set.",
+				"description": "If false (default), the AI agent processes the message when triggered. If true, the message is sent directly to the channel without AI processing. Not applicable when 'command' is set.",
 			},
 		},
 		"required": []string{"action"},
@@ -172,18 +172,15 @@ func (t *CronTool) addJob(args map[string]interface{}) *ToolResult {
 		return ErrorResult("one of at_seconds, every_seconds, or cron_expr is required")
 	}
 
-	// Read deliver parameter, default to true (direct channel delivery)
-	deliver := true
+	// deliver defaults to false: message-based tasks are processed by the AI agent.
+	// Users can set deliver=true explicitly for simple pass-through reminders.
+	// command always forces deliver=false.
+	command, _ := args["command"].(string)
+	deliver := false
 	if d, ok := args["deliver"].(bool); ok {
 		deliver = d
 	}
-
-	command, _ := args["command"].(string)
 	if command != "" {
-		// Commands must be processed by agent/exec tool, so deliver must be false (or handled specifically)
-		// Actually, let's keep deliver=false to let the system know it's not a simple chat message
-		// But for our new logic in ExecuteJob, we can handle it regardless of deliver flag if Payload.Command is set.
-		// However, logically, it's not "delivered" to chat directly as is.
 		deliver = false
 	}
 

@@ -178,6 +178,7 @@ type AgentDefaults struct {
 	Temperature         *float64 `json:"temperature,omitempty" env:"MOBAICLAW_AGENTS_DEFAULTS_TEMPERATURE"`
 	MaxToolIterations   int      `json:"max_tool_iterations" env:"MOBAICLAW_AGENTS_DEFAULTS_MAX_TOOL_ITERATIONS"`
 	ContextWindow       int      `json:"context_window" env:"MOBAICLAW_AGENTS_DEFAULTS_CONTEXT_WINDOW"`
+	SummaryModel        string   `json:"summary_model,omitempty" env:"MOBAICLAW_AGENTS_DEFAULTS_SUMMARY_MODEL"`
 }
 
 type ChannelsConfig struct {

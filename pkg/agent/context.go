@@ -188,8 +188,8 @@ func (cb *ContextBuilder) BuildMessages(history []providers.Message, summary str
 			"preview": preview,
 		})
 
-	if summary != "" {
-		systemPrompt += "\n\n## Summary of Previous Conversation\n\n" + summary
+	if cs, ok := parseSummary(summary); ok {
+		systemPrompt += "\n\n## Summary of Previous Conversation\n\n" + renderSummaryMarkdown(cs)
 	}
 
 	history = sanitizeHistoryForProvider(history)
