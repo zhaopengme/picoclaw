@@ -233,6 +233,21 @@ func TestDefaultConfig_MaxToolIterations(t *testing.T) {
 	}
 }
 
+// TestDefaultConfig_ContextWindow verifies context window has a default value distinct from MaxTokens
+func TestDefaultConfig_ContextWindow(t *testing.T) {
+	cfg := DefaultConfig()
+
+	if cfg.Agents.Defaults.ContextWindow == 0 {
+		t.Error("ContextWindow should not be zero")
+	}
+	if cfg.Agents.Defaults.ContextWindow == cfg.Agents.Defaults.MaxTokens {
+		t.Errorf("ContextWindow (%d) should not equal MaxTokens (%d)", cfg.Agents.Defaults.ContextWindow, cfg.Agents.Defaults.MaxTokens)
+	}
+	if cfg.Agents.Defaults.ContextWindow != 32768 {
+		t.Errorf("ContextWindow = %d, want 32768", cfg.Agents.Defaults.ContextWindow)
+	}
+}
+
 // TestDefaultConfig_Temperature verifies temperature has default value
 func TestDefaultConfig_Temperature(t *testing.T) {
 	cfg := DefaultConfig()

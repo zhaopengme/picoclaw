@@ -49,7 +49,7 @@ func (t *CronTool) Name() string {
 
 // Description returns the tool description
 func (t *CronTool) Description() string {
-	return "Schedule reminders, tasks, or system commands. IMPORTANT: When user asks to be reminded or scheduled, you MUST call this tool. Use 'at_seconds' for one-time reminders (e.g., 'remind me in 10 minutes' → at_seconds=600). Use 'every_seconds' ONLY for recurring tasks (e.g., 'every 2 hours' → every_seconds=7200). Use 'cron_expr' for complex recurring schedules. Use 'command' to execute shell commands directly."
+	return "Schedule reminders or tasks to run later. DEFAULT MODE: set 'message' to a natural language instruction — the AI agent will process it when triggered (e.g., 'Check disk usage and report', 'Remind me to drink water'). Only set 'command' if the user explicitly wants a raw shell command executed. Use 'at_seconds' for one-time tasks (e.g., 'remind me in 10 minutes' → at_seconds=600). Use 'every_seconds' for recurring tasks (e.g., 'every 2 hours' → every_seconds=7200). Use 'cron_expr' for complex schedules (e.g., '0 9 * * *'). Example: {\"action\":\"add\",\"message\":\"Check weather and report\",\"every_seconds\":3600}"
 }
 
 // Parameters returns the tool parameters schema
@@ -64,11 +64,11 @@ func (t *CronTool) Parameters() map[string]interface{} {
 			},
 			"message": map[string]interface{}{
 				"type":        "string",
-				"description": "The reminder/task message to display when triggered. If 'command' is used, this describes what the command does.",
+				"description": "(Required for 'add') Natural language instruction for the AI agent to execute when triggered (e.g., 'Check weather and give a summary', 'Remind me to take a break'). This is the PRIMARY field — always set this. The agent will receive and act on this message at the scheduled time.",
 			},
 			"command": map[string]interface{}{
 				"type":        "string",
-				"description": "Optional: Shell command to execute directly (e.g., 'df -h'). If set, the agent will run this command and report output instead of just showing the message. 'deliver' will be forced to false for commands.",
+				"description": "ONLY use when the user explicitly wants a raw shell command executed (e.g., 'df -h', 'uptime'). Do NOT use this for natural language tasks — use 'message' instead. When set, the formatted shell output is sent to the channel.",
 			},
 			"at_seconds": map[string]interface{}{
 				"type":        "integer",
@@ -88,7 +88,7 @@ func (t *CronTool) Parameters() map[string]interface{} {
 			},
 			"deliver": map[string]interface{}{
 				"type":        "boolean",
-				"description": "If true, send message directly to channel. If false, let agent process message (for complex tasks). Default: true",
+				"description": "If true (default), send message directly to channel without AI processing. If false, let agent process the message with AI. Use deliver=false for complex tasks that need AI reasoning. Not applicable when 'command' is set.",
 			},
 		},
 		"required": []string{"action"},
@@ -172,7 +172,7 @@ func (t *CronTool) addJob(args map[string]interface{}) *ToolResult {
 		return ErrorResult("one of at_seconds, every_seconds, or cron_expr is required")
 	}
 
-	// Read deliver parameter, default to true
+	// Read deliver parameter, default to true (direct channel delivery)
 	deliver := true
 	if d, ok := args["deliver"].(bool); ok {
 		deliver = d

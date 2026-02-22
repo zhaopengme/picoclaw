@@ -1029,7 +1029,8 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 
 // summarizeBatch summarizes a batch of messages.
 func (al *AgentLoop) summarizeBatch(ctx context.Context, agent *AgentInstance, batch []providers.Message, existingSummary string) (string, error) {
-	prompt := "Provide a concise summary of this conversation segment, preserving core context and key points.\n"
+	prompt := "Provide a concise summary of this conversation segment, preserving core context and key points.\n" +
+		"IMPORTANT: Preserve any structured state such as: scheduled tasks/reminders created, user preferences stated, pending action items, and tool configurations discussed.\n"
 	if existingSummary != "" {
 		prompt += "Existing context: " + existingSummary + "\n"
 	}
