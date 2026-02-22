@@ -91,7 +91,7 @@ func cronListCmd(storePath string) {
 
 		nextRun := "scheduled"
 		if job.State.NextRunAtMS != nil {
-			nextTime := time.UnixMilli(*job.State.NextRunAtMS)
+			nextTime := time.Unix(*job.State.NextRunAtMS/1000, (*job.State.NextRunAtMS%1000)*1000000).Local()
 			nextRun = nextTime.Format("2006-01-02 15:04")
 		}
 

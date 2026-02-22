@@ -265,7 +265,8 @@ func (cs *CronService) computeNextRun(schedule *CronSchedule, nowMS int64) *int6
 		}
 
 		// Use gronx to calculate next run time
-		now := time.UnixMilli(nowMS)
+		// Use local timezone instead of UTC for cron expressions
+		now := time.Unix(nowMS/1000, (nowMS%1000)*1000000).Local()
 		nextTime, err := gronx.NextTickAfter(schedule.Expr, now, false)
 		if err != nil {
 			log.Printf("[cron] failed to compute next run for expr '%s': %v", schedule.Expr, err)

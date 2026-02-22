@@ -288,6 +288,12 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 	sessionKey := route.SessionKey
 	if msg.SessionKey != "" && strings.HasPrefix(msg.SessionKey, "agent:") {
 		sessionKey = msg.SessionKey
+		// Extract agent_id from sessionKey and use that agent
+		if parsed := routing.ParseAgentSessionKey(sessionKey); parsed != nil {
+			if parsedAgent, ok := al.registry.GetAgent(parsed.AgentID); ok {
+				agent = parsedAgent
+			}
+		}
 	}
 
 	logger.InfoCF("agent", "Routed message",
