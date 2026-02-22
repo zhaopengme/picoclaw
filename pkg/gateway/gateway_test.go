@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/zhaopengme/mobaiclaw/pkg/bus"
@@ -124,5 +125,16 @@ func TestHandleClearCommandWithNilSessions(t *testing.T) {
 	expectedErrMsg := "sessions not available"
 	if response != expectedErrMsg {
 		t.Errorf("Expected response '%s', got '%s'", expectedErrMsg, response)
+	}
+}
+
+func TestHelpCommandIncludesClear(t *testing.T) {
+	gw := &CommandGateway{}
+	resp, handled := gw.handleCommand(context.Background(), bus.InboundMessage{Content: "/help"})
+	if !handled {
+		t.Fatal("/help should be handled")
+	}
+	if !strings.Contains(resp, "/clear") {
+		t.Error("/help output should include /clear command")
 	}
 }

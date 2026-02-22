@@ -97,6 +97,7 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 
 	case "/help":
 		return `/start - Start the bot
+/clear - Clear current session history and summary
 /help - Show this help message
 /show [model|channel|agents] - Show current configuration
 /list [models|channels|agents] - List available options
