@@ -1,4 +1,9 @@
-package providers
+// MobaiClaw - Ultra-lightweight personal AI agent
+// License: MIT
+//
+// Copyright (c) 2026 MobaiClaw contributors
+
+package claude
 
 import (
 	"encoding/json"
@@ -9,9 +14,10 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	anthropicoption "github.com/anthropics/anthropic-sdk-go/option"
 	anthropicprovider "github.com/zhaopengme/mobaiclaw/pkg/providers/anthropic"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/protocoltypes"
 )
 
-func TestClaudeProvider_ChatRoundTrip(t *testing.T) {
+func TestProvider_ChatRoundTrip(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/messages" {
 			http.Error(w, "not found", http.StatusNotFound)
@@ -45,9 +51,9 @@ func TestClaudeProvider_ChatRoundTrip(t *testing.T) {
 	defer server.Close()
 
 	delegate := anthropicprovider.NewProviderWithClient(createAnthropicTestClient(server.URL, "test-token"))
-	provider := newClaudeProviderWithDelegate(delegate)
+	provider := NewProviderWithDelegate(delegate)
 
-	messages := []Message{{Role: "user", Content: "Hello"}}
+	messages := []protocoltypes.Message{{Role: "user", Content: "Hello"}}
 	resp, err := provider.Chat(t.Context(), messages, nil, "claude-sonnet-4.6", map[string]interface{}{"max_tokens": 1024})
 	if err != nil {
 		t.Fatalf("Chat() error: %v", err)
@@ -63,8 +69,8 @@ func TestClaudeProvider_ChatRoundTrip(t *testing.T) {
 	}
 }
 
-func TestClaudeProvider_GetDefaultModel(t *testing.T) {
-	p := NewClaudeProvider("test-token")
+func TestProvider_GetDefaultModel(t *testing.T) {
+	p := NewProvider("test-token")
 	if got := p.GetDefaultModel(); got != "claude-sonnet-4.6" {
 		t.Errorf("GetDefaultModel() = %q, want %q", got, "claude-sonnet-4.6")
 	}

@@ -400,7 +400,7 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 	}
 
 	// 1. Update tool contexts
-	al.updateToolContexts(agent, opts.Channel, opts.ChatID)
+	al.updateToolContexts(agent, opts.Channel, opts.ChatID, opts.SessionKey)
 
 	// 2. Build messages (skip history for heartbeat)
 	var history []providers.Message
@@ -722,7 +722,7 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 				}
 			}
 
-			toolResult := agent.Tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, opts.Channel, opts.ChatID, asyncCallback, progressCallback)
+			toolResult := agent.Tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, opts.Channel, opts.ChatID, opts.SessionKey, asyncCallback, progressCallback)
 
 			// Send ForUser content to user immediately if not Silent
 			if !toolResult.Silent && toolResult.ForUser != "" && opts.SendResponse {
@@ -759,22 +759,27 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, agent *AgentInstance, 
 	return finalContent, iteration, nil
 }
 
-// updateToolContexts updates the context for tools that need channel/chatID info.
-func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID string) {
+// updateToolContexts updates the context for tools that need channel/chatID/sessionKey info.
+func (al *AgentLoop) updateToolContexts(agent *AgentInstance, channel, chatID, sessionKey string) {
 	// Use ContextualTool interface instead of type assertions
 	if tool, ok := agent.Tools.Get("message"); ok {
 		if mt, ok := tool.(tools.ContextualTool); ok {
-			mt.SetContext(channel, chatID)
+			mt.SetContext(channel, chatID, sessionKey)
 		}
 	}
 	if tool, ok := agent.Tools.Get("spawn"); ok {
 		if st, ok := tool.(tools.ContextualTool); ok {
-			st.SetContext(channel, chatID)
+			st.SetContext(channel, chatID, sessionKey)
 		}
 	}
 	if tool, ok := agent.Tools.Get("subagent"); ok {
 		if st, ok := tool.(tools.ContextualTool); ok {
-			st.SetContext(channel, chatID)
+			st.SetContext(channel, chatID, sessionKey)
+		}
+	}
+	if tool, ok := agent.Tools.Get("cron"); ok {
+		if ct, ok := tool.(tools.ContextualTool); ok {
+			ct.SetContext(channel, chatID, sessionKey)
 		}
 	}
 }

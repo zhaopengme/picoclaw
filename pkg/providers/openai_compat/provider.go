@@ -120,21 +120,26 @@ func (p *Provider) Chat(ctx context.Context, messages []Message, tools []ToolDef
 
 	log.Printf("[DEBUG] LLM Request: URL=%s, Model=%s, User-Agent=%s", req.URL.String(), model, req.Header.Get("User-Agent"))
 
+	start := time.Now()
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
+		log.Printf("[DEBUG] LLM Response: URL=%s, Error=%s, Duration=%dms", req.URL.String(), err.Error(), time.Since(start).Milliseconds())
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Printf("[DEBUG] LLM Response: URL=%s, Status=%d, Error=%s, Duration=%dms", req.URL.String(), resp.StatusCode, err.Error(), time.Since(start).Milliseconds())
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("[DEBUG] LLM Response: URL=%s, Status=%d, Duration=%dms", req.URL.String(), resp.StatusCode, time.Since(start).Milliseconds())
 		return nil, fmt.Errorf("API request failed:\n  Status: %d\n  Body:   %s", resp.StatusCode, string(body))
 	}
 
+	log.Printf("[DEBUG] LLM Response: URL=%s, Status=%d, Duration=%dms", req.URL.String(), resp.StatusCode, time.Since(start).Milliseconds())
 	return parseResponse(body)
 }
 

@@ -55,7 +55,7 @@ func (t *SpawnTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *SpawnTool) SetContext(channel, chatID string) {
+func (t *SpawnTool) SetContext(channel, chatID, sessionKey string) {
 	t.originChannel = channel
 	t.originChatID = chatID
 }

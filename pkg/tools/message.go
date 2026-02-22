@@ -47,10 +47,10 @@ func (t *MessageTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *MessageTool) SetContext(channel, chatID string) {
+func (t *MessageTool) SetContext(channel, chatID, sessionKey string) {
 	t.defaultChannel = channel
 	t.defaultChatID = chatID
-	t.sentInRound = false // Reset send tracking for new processing round
+	t.sentInRound = false
 }
 
 // HasSentInRound returns true if the message tool sent a message during the current round.

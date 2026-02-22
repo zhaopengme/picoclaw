@@ -23,12 +23,13 @@ type CronSchedule struct {
 }
 
 type CronPayload struct {
-	Kind    string `json:"kind"`
-	Message string `json:"message"`
-	Command string `json:"command,omitempty"`
-	Deliver bool   `json:"deliver"`
-	Channel string `json:"channel,omitempty"`
-	To      string `json:"to,omitempty"`
+	Kind       string `json:"kind"`
+	Message    string `json:"message"`
+	Command    string `json:"command,omitempty"`
+	Deliver    bool   `json:"deliver"`
+	Channel    string `json:"channel,omitempty"`
+	To         string `json:"to,omitempty"`
+	SessionKey string `json:"sessionKey,omitempty"`
 }
 
 type CronJobState struct {
@@ -343,7 +344,7 @@ func (cs *CronService) saveStoreUnsafe() error {
 	return os.WriteFile(cs.storePath, data, 0600)
 }
 
-func (cs *CronService) AddJob(name string, schedule CronSchedule, message string, deliver bool, channel, to string) (*CronJob, error) {
+func (cs *CronService) AddJob(name string, schedule CronSchedule, message string, deliver bool, channel, to, sessionKey string) (*CronJob, error) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -358,11 +359,12 @@ func (cs *CronService) AddJob(name string, schedule CronSchedule, message string
 		Enabled:  true,
 		Schedule: schedule,
 		Payload: CronPayload{
-			Kind:    "agent_turn",
-			Message: message,
-			Deliver: deliver,
-			Channel: channel,
-			To:      to,
+			Kind:       "agent_turn",
+			Message:    message,
+			Deliver:    deliver,
+			Channel:    channel,
+			To:         to,
+			SessionKey: sessionKey,
 		},
 		State: CronJobState{
 			NextRunAtMS: cs.computeNextRun(&schedule, now),

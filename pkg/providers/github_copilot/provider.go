@@ -1,4 +1,9 @@
-package providers
+// MobaiClaw - Ultra-lightweight personal AI agent
+// License: MIT
+//
+// Copyright (c) 2026 MobaiClaw contributors
+
+package github_copilot
 
 import (
 	"context"
@@ -7,23 +12,21 @@ import (
 	json "encoding/json"
 
 	copilot "github.com/github/copilot-sdk/go"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/protocoltypes"
 )
 
-type GitHubCopilotProvider struct {
+type Provider struct {
 	uri         string
-	connectMode string // `stdio` or `grpc``
-
-	session *copilot.Session
+	connectMode string
+	session     *copilot.Session
 }
 
-func NewGitHubCopilotProvider(uri string, connectMode string, model string) (*GitHubCopilotProvider, error) {
-
+func NewProvider(uri string, connectMode string, model string) (*Provider, error) {
 	var session *copilot.Session
 	if connectMode == "" {
 		connectMode = "grpc"
 	}
 	switch connectMode {
-
 	case "stdio":
 		//todo
 	case "grpc":
@@ -38,18 +41,16 @@ func NewGitHubCopilotProvider(uri string, connectMode string, model string) (*Gi
 			Model: model,
 			Hooks: &copilot.SessionHooks{},
 		})
-
 	}
 
-	return &GitHubCopilotProvider{
+	return &Provider{
 		uri:         uri,
 		connectMode: connectMode,
 		session:     session,
 	}, nil
 }
 
-// Chat sends a chat request to GitHub Copilot
-func (p *GitHubCopilotProvider) Chat(ctx context.Context, messages []Message, tools []ToolDefinition, model string, options map[string]interface{}) (*LLMResponse, error) {
+func (p *Provider) Chat(ctx context.Context, messages []protocoltypes.Message, tools []protocoltypes.ToolDefinition, model string, options map[string]interface{}) (*protocoltypes.LLMResponse, error) {
 	type tempMessage struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
@@ -69,14 +70,12 @@ func (p *GitHubCopilotProvider) Chat(ctx context.Context, messages []Message, to
 		Prompt: string(fullcontent),
 	})
 
-	return &LLMResponse{
+	return &protocoltypes.LLMResponse{
 		FinishReason: "stop",
 		Content:      content,
 	}, nil
-
 }
 
-func (p *GitHubCopilotProvider) GetDefaultModel() string {
-
+func (p *Provider) GetDefaultModel() string {
 	return "gpt-4.1"
 }

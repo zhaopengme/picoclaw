@@ -44,7 +44,7 @@ func TestSubagentManager_SetLLMOptions_AppliesToRunToolLoop(t *testing.T) {
 	manager := NewSubagentManager(provider, "test-model", "/tmp/test", nil)
 	manager.SetLLMOptions(2048, 0.6)
 	tool := NewSubagentTool(manager)
-	tool.SetContext("cli", "direct")
+	tool.SetContext("cli", "direct", "")
 
 	ctx := context.Background()
 	args := map[string]interface{}{"task": "Do something"}
@@ -147,7 +147,7 @@ func TestSubagentTool_SetContext(t *testing.T) {
 	manager := NewSubagentManager(provider, "test-model", "/tmp/test", nil)
 	tool := NewSubagentTool(manager)
 
-	tool.SetContext("test-channel", "test-chat")
+	tool.SetContext("test-channel", "test-chat", "")
 
 	// Verify context is set (we can't directly access private fields,
 	// but we can verify it doesn't crash)
@@ -160,7 +160,7 @@ func TestSubagentTool_Execute_Success(t *testing.T) {
 	msgBus := bus.NewMessageBus()
 	manager := NewSubagentManager(provider, "test-model", "/tmp/test", msgBus)
 	tool := NewSubagentTool(manager)
-	tool.SetContext("telegram", "chat-123")
+	tool.SetContext("telegram", "chat-123", "")
 
 	ctx := context.Background()
 	args := map[string]interface{}{
@@ -294,7 +294,7 @@ func TestSubagentTool_Execute_ContextPassing(t *testing.T) {
 	// Set context
 	channel := "test-channel"
 	chatID := "test-chat"
-	tool.SetContext(channel, chatID)
+	tool.SetContext(channel, chatID, "")
 
 	ctx := context.Background()
 	args := map[string]interface{}{

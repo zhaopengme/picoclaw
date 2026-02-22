@@ -33,7 +33,7 @@ type ToolLoopResult struct {
 
 // RunToolLoop executes the LLM + tool call iteration loop.
 // This is the core agent logic that can be reused by both main agent and subagents.
-func RunToolLoop(ctx context.Context, config ToolLoopConfig, messages []providers.Message, channel, chatID string) (*ToolLoopResult, error) {
+func RunToolLoop(ctx context.Context, config ToolLoopConfig, messages []providers.Message, channel, chatID, sessionKey string) (*ToolLoopResult, error) {
 	iteration := 0
 	var finalContent string
 
@@ -129,7 +129,7 @@ func RunToolLoop(ctx context.Context, config ToolLoopConfig, messages []provider
 			// Execute tool (no async callback for subagents - they run independently)
 			var toolResult *ToolResult
 			if config.Tools != nil {
-				toolResult = config.Tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, channel, chatID, nil, nil)
+				toolResult = config.Tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, channel, chatID, sessionKey, nil, nil)
 			} else {
 				toolResult = ErrorResult("No tools available")
 			}

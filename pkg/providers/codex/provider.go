@@ -1,4 +1,9 @@
-package providers
+// MobaiClaw - Ultra-lightweight personal AI agent
+// License: MIT
+//
+// Copyright (c) 2026 MobaiClaw contributors
+
+package codex
 
 import (
 	"context"
@@ -10,23 +15,21 @@ import (
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
-	"github.com/zhaopengme/mobaiclaw/pkg/auth"
 	"github.com/zhaopengme/mobaiclaw/pkg/logger"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/protocoltypes"
 )
 
-const codexDefaultModel = "gpt-5.2"
-const codexDefaultInstructions = "You are Codex, a coding assistant."
+const DefaultModel = "gpt-5.2"
+const DefaultInstructions = "You are Codex, a coding assistant."
 
-type CodexProvider struct {
+type Provider struct {
 	client          *openai.Client
 	accountID       string
 	tokenSource     func() (string, string, error)
 	enableWebSearch bool
 }
 
-const defaultCodexInstructions = "You are Codex, a coding assistant."
-
-func NewCodexProvider(token, accountID string) *CodexProvider {
+func NewProvider(token, accountID string) *Provider {
 	opts := []option.RequestOption{
 		option.WithBaseURL("https://chatgpt.com/backend-api/codex"),
 		option.WithAPIKey(token),
@@ -37,23 +40,23 @@ func NewCodexProvider(token, accountID string) *CodexProvider {
 		opts = append(opts, option.WithHeader("Chatgpt-Account-Id", accountID))
 	}
 	client := openai.NewClient(opts...)
-	return &CodexProvider{
+	return &Provider{
 		client:          &client,
 		accountID:       accountID,
 		enableWebSearch: true,
 	}
 }
 
-func NewCodexProviderWithTokenSource(token, accountID string, tokenSource func() (string, string, error)) *CodexProvider {
-	p := NewCodexProvider(token, accountID)
+func NewProviderWithTokenSource(token, accountID string, tokenSource func() (string, string, error)) *Provider {
+	p := NewProvider(token, accountID)
 	p.tokenSource = tokenSource
 	return p
 }
 
-func (p *CodexProvider) Chat(ctx context.Context, messages []Message, tools []ToolDefinition, model string, options map[string]interface{}) (*LLMResponse, error) {
+func (p *Provider) Chat(ctx context.Context, messages []protocoltypes.Message, tools []protocoltypes.ToolDefinition, model string, options map[string]interface{}) (*protocoltypes.LLMResponse, error) {
 	var opts []option.RequestOption
 	accountID := p.accountID
-	resolvedModel, fallbackReason := resolveCodexModel(model)
+	resolvedModel, fallbackReason := resolveModel(model)
 	if fallbackReason != "" {
 		logger.WarnCF("provider.codex", "Requested model is not compatible with Codex backend, using fallback", map[string]interface{}{
 			"requested_model": model,
@@ -80,7 +83,7 @@ func (p *CodexProvider) Chat(ctx context.Context, messages []Message, tools []To
 		})
 	}
 
-	params := buildCodexParams(messages, tools, resolvedModel, options, p.enableWebSearch)
+	params := buildParams(messages, tools, resolvedModel, options, p.enableWebSearch)
 
 	stream := p.client.Responses.NewStreaming(ctx, params, opts...)
 	defer stream.Close()
@@ -135,23 +138,23 @@ func (p *CodexProvider) Chat(ctx context.Context, messages []Message, tools []To
 		return nil, fmt.Errorf("codex API call: stream ended without completed response")
 	}
 
-	return parseCodexResponse(resp), nil
+	return parseResponse(resp), nil
 }
 
-func (p *CodexProvider) GetDefaultModel() string {
-	return codexDefaultModel
+func (p *Provider) GetDefaultModel() string {
+	return DefaultModel
 }
 
-func resolveCodexModel(model string) (string, string) {
+func resolveModel(model string) (string, string) {
 	m := strings.ToLower(strings.TrimSpace(model))
 	if m == "" {
-		return codexDefaultModel, "empty model"
+		return DefaultModel, "empty model"
 	}
 
 	if strings.HasPrefix(m, "openai/") {
 		m = strings.TrimPrefix(m, "openai/")
 	} else if strings.Contains(m, "/") {
-		return codexDefaultModel, "non-openai model namespace"
+		return DefaultModel, "non-openai model namespace"
 	}
 
 	unsupportedPrefixes := []string{
@@ -173,7 +176,7 @@ func resolveCodexModel(model string) (string, string) {
 	}
 	for _, prefix := range unsupportedPrefixes {
 		if strings.HasPrefix(m, prefix) {
-			return codexDefaultModel, "unsupported model prefix"
+			return DefaultModel, "unsupported model prefix"
 		}
 	}
 
@@ -181,10 +184,10 @@ func resolveCodexModel(model string) (string, string) {
 		return m, ""
 	}
 
-	return codexDefaultModel, "unsupported model family"
+	return DefaultModel, "unsupported model family"
 }
 
-func buildCodexParams(messages []Message, tools []ToolDefinition, model string, options map[string]interface{}, enableWebSearch bool) responses.ResponseNewParams {
+func buildParams(messages []protocoltypes.Message, tools []protocoltypes.ToolDefinition, model string, options map[string]interface{}, enableWebSearch bool) responses.ResponseNewParams {
 	var inputItems responses.ResponseInputParam
 	var instructions string
 
@@ -219,7 +222,7 @@ func buildCodexParams(messages []Message, tools []ToolDefinition, model string, 
 					})
 				}
 				for _, tc := range msg.ToolCalls {
-					name, args, ok := resolveCodexToolCall(tc)
+					name, args, ok := resolveToolCall(tc)
 					if !ok {
 						logger.WarnCF("provider.codex", "Skipping invalid tool call in history", map[string]interface{}{
 							"call_id": tc.ID,
@@ -257,25 +260,23 @@ func buildCodexParams(messages []Message, tools []ToolDefinition, model string, 
 		Input: responses.ResponseNewParamsInputUnion{
 			OfInputItemList: inputItems,
 		},
-		Instructions: openai.Opt(instructions),
-		Store:        openai.Opt(false),
+		Store: openai.Opt(false),
 	}
 
 	if instructions != "" {
 		params.Instructions = openai.Opt(instructions)
 	} else {
-		// ChatGPT Codex backend requires instructions to be present.
-		params.Instructions = openai.Opt(defaultCodexInstructions)
+		params.Instructions = openai.Opt(DefaultInstructions)
 	}
 
 	if len(tools) > 0 || enableWebSearch {
-		params.Tools = translateToolsForCodex(tools, enableWebSearch)
+		params.Tools = translateTools(tools, enableWebSearch)
 	}
 
 	return params
 }
 
-func resolveCodexToolCall(tc ToolCall) (name string, arguments string, ok bool) {
+func resolveToolCall(tc protocoltypes.ToolCall) (name string, arguments string, ok bool) {
 	name = tc.Name
 	if name == "" && tc.Function != nil {
 		name = tc.Function.Name
@@ -299,7 +300,7 @@ func resolveCodexToolCall(tc ToolCall) (name string, arguments string, ok bool) 
 	return name, "{}", true
 }
 
-func translateToolsForCodex(tools []ToolDefinition, enableWebSearch bool) []responses.ToolUnionParam {
+func translateTools(tools []protocoltypes.ToolDefinition, enableWebSearch bool) []responses.ToolUnionParam {
 	capHint := len(tools)
 	if enableWebSearch {
 		capHint++
@@ -328,9 +329,9 @@ func translateToolsForCodex(tools []ToolDefinition, enableWebSearch bool) []resp
 	return result
 }
 
-func parseCodexResponse(resp *responses.Response) *LLMResponse {
+func parseResponse(resp *responses.Response) *protocoltypes.LLMResponse {
 	var content strings.Builder
-	var toolCalls []ToolCall
+	var toolCalls []protocoltypes.ToolCall
 
 	for _, item := range resp.Output {
 		switch item.Type {
@@ -345,7 +346,7 @@ func parseCodexResponse(resp *responses.Response) *LLMResponse {
 			if err := json.Unmarshal([]byte(item.Arguments), &args); err != nil {
 				args = map[string]interface{}{"raw": item.Arguments}
 			}
-			toolCalls = append(toolCalls, ToolCall{
+			toolCalls = append(toolCalls, protocoltypes.ToolCall{
 				ID:        item.CallID,
 				Name:      item.Name,
 				Arguments: args,
@@ -361,48 +362,19 @@ func parseCodexResponse(resp *responses.Response) *LLMResponse {
 		finishReason = "length"
 	}
 
-	var usage *UsageInfo
+	var usage *protocoltypes.UsageInfo
 	if resp.Usage.TotalTokens > 0 {
-		usage = &UsageInfo{
+		usage = &protocoltypes.UsageInfo{
 			PromptTokens:     int(resp.Usage.InputTokens),
 			CompletionTokens: int(resp.Usage.OutputTokens),
 			TotalTokens:      int(resp.Usage.TotalTokens),
 		}
 	}
 
-	return &LLMResponse{
+	return &protocoltypes.LLMResponse{
 		Content:      content.String(),
 		ToolCalls:    toolCalls,
 		FinishReason: finishReason,
 		Usage:        usage,
-	}
-}
-
-func createCodexTokenSource() func() (string, string, error) {
-	return func() (string, string, error) {
-		cred, err := auth.GetCredential("openai")
-		if err != nil {
-			return "", "", fmt.Errorf("loading auth credentials: %w", err)
-		}
-		if cred == nil {
-			return "", "", fmt.Errorf("no credentials for openai. Run: mobaiclaw auth login --provider openai")
-		}
-
-		if cred.AuthMethod == "oauth" && cred.NeedsRefresh() && cred.RefreshToken != "" {
-			oauthCfg := auth.OpenAIOAuthConfig()
-			refreshed, err := auth.RefreshAccessToken(cred, oauthCfg)
-			if err != nil {
-				return "", "", fmt.Errorf("refreshing token: %w", err)
-			}
-			if refreshed.AccountID == "" {
-				refreshed.AccountID = cred.AccountID
-			}
-			if err := auth.SetCredential("openai", refreshed); err != nil {
-				return "", "", fmt.Errorf("saving refreshed token: %w", err)
-			}
-			return refreshed.AccessToken, refreshed.AccountID, nil
-		}
-
-		return cred.AccessToken, cred.AccountID, nil
 	}
 }

@@ -25,6 +25,7 @@ type CronTool struct {
 	execTool    *ExecTool
 	channel     string
 	chatID      string
+	sessionKey  string
 	mu          sync.RWMutex
 }
 
@@ -95,11 +96,12 @@ func (t *CronTool) Parameters() map[string]interface{} {
 }
 
 // SetContext sets the current session context for job creation
-func (t *CronTool) SetContext(channel, chatID string) {
+func (t *CronTool) SetContext(channel, chatID, sessionKey string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.channel = channel
 	t.chatID = chatID
+	t.sessionKey = sessionKey
 }
 
 // Execute runs the tool with the given arguments
@@ -129,6 +131,7 @@ func (t *CronTool) addJob(args map[string]interface{}) *ToolResult {
 	t.mu.RLock()
 	channel := t.channel
 	chatID := t.chatID
+	sessionKey := t.sessionKey
 	t.mu.RUnlock()
 
 	if channel == "" || chatID == "" {
@@ -194,6 +197,7 @@ func (t *CronTool) addJob(args map[string]interface{}) *ToolResult {
 		deliver,
 		channel,
 		chatID,
+		sessionKey,
 	)
 	if err != nil {
 		return ErrorResult(fmt.Sprintf("Error adding job: %v", err))
@@ -310,7 +314,10 @@ func (t *CronTool) ExecuteJob(ctx context.Context, job *cron.CronJob) string {
 	}
 
 	// For deliver=false, process through agent (for complex tasks)
-	sessionKey := fmt.Sprintf("cron-%s", job.ID)
+	sessionKey := job.Payload.SessionKey
+	if sessionKey == "" {
+		sessionKey = fmt.Sprintf("cron-%s", job.ID)
+	}
 
 	// Call agent with job's message
 	response, err := t.executor.ProcessDirectWithChannel(

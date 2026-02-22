@@ -8,7 +8,7 @@ import (
 
 func TestMessageTool_Execute_Success(t *testing.T) {
 	tool := NewMessageTool()
-	tool.SetContext("test-channel", "test-chat-id")
+	tool.SetContext("test-channel", "test-chat-id", "")
 
 	var sentChannel, sentChatID, sentContent string
 	tool.SetSendCallback(func(channel, chatID, content string) error {
@@ -60,7 +60,7 @@ func TestMessageTool_Execute_Success(t *testing.T) {
 
 func TestMessageTool_Execute_WithCustomChannel(t *testing.T) {
 	tool := NewMessageTool()
-	tool.SetContext("default-channel", "default-chat-id")
+	tool.SetContext("default-channel", "default-chat-id", "")
 
 	var sentChannel, sentChatID string
 	tool.SetSendCallback(func(channel, chatID, content string) error {
@@ -96,7 +96,7 @@ func TestMessageTool_Execute_WithCustomChannel(t *testing.T) {
 
 func TestMessageTool_Execute_SendFailure(t *testing.T) {
 	tool := NewMessageTool()
-	tool.SetContext("test-channel", "test-chat-id")
+	tool.SetContext("test-channel", "test-chat-id", "")
 
 	sendErr := errors.New("network error")
 	tool.SetSendCallback(func(channel, chatID, content string) error {
@@ -133,7 +133,7 @@ func TestMessageTool_Execute_SendFailure(t *testing.T) {
 
 func TestMessageTool_Execute_MissingContent(t *testing.T) {
 	tool := NewMessageTool()
-	tool.SetContext("test-channel", "test-chat-id")
+	tool.SetContext("test-channel", "test-chat-id", "")
 
 	ctx := context.Background()
 	args := map[string]interface{}{} // content missing
@@ -175,7 +175,7 @@ func TestMessageTool_Execute_NoTargetChannel(t *testing.T) {
 
 func TestMessageTool_Execute_NotConfigured(t *testing.T) {
 	tool := NewMessageTool()
-	tool.SetContext("test-channel", "test-chat-id")
+	tool.SetContext("test-channel", "test-chat-id", "")
 	// No SetSendCallback called
 
 	ctx := context.Background()

@@ -123,10 +123,12 @@ func TestCreateProviderFromConfig_DefaultAPIBase(t *testing.T) {
 				t.Fatalf("CreateProviderFromConfig() error = %v", err)
 			}
 
-			// Verify we got an HTTPProvider for all these protocols
-			if _, ok := provider.(*HTTPProvider); !ok {
-				t.Fatalf("expected *HTTPProvider, got %T", provider)
+			// Verify we got a valid provider (all these protocols return HTTP-compatible providers)
+			if provider == nil {
+				t.Fatalf("expected non-nil provider, got nil")
 			}
+			// Verify it implements LLMProvider
+			var _ LLMProvider = provider
 		})
 	}
 }

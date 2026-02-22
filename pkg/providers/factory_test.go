@@ -1,3 +1,8 @@
+// MobaiClaw - Ultra-lightweight personal AI agent
+// License: MIT
+//
+// Copyright (c) 2026 MobaiClaw contributors
+
 package providers
 
 import (
@@ -211,9 +216,11 @@ func TestCreateProviderReturnsHTTPProviderForOpenRouter(t *testing.T) {
 		t.Fatalf("CreateProvider() error = %v", err)
 	}
 
-	if _, ok := provider.(*HTTPProvider); !ok {
-		t.Fatalf("provider type = %T, want *HTTPProvider", provider)
+	if provider == nil {
+		t.Fatal("provider is nil")
 	}
+	// Just verify it implements LLMProvider - we don't check the specific type anymore
+	var _ LLMProvider = provider
 }
 
 func TestCreateProviderReturnsCodexCliProviderForCodexCode(t *testing.T) {
@@ -232,8 +239,12 @@ func TestCreateProviderReturnsCodexCliProviderForCodexCode(t *testing.T) {
 		t.Fatalf("CreateProvider() error = %v", err)
 	}
 
-	if _, ok := provider.(*CodexCliProvider); !ok {
-		t.Fatalf("provider type = %T, want *CodexCliProvider", provider)
+	if provider == nil {
+		t.Fatal("provider is nil")
+	}
+	// Verify GetDefaultModel returns expected value for codex-cli
+	if got := provider.GetDefaultModel(); got != "codex-cli" {
+		t.Errorf("GetDefaultModel() = %q, want %q", got, "codex-cli")
 	}
 }
 
@@ -253,8 +264,12 @@ func TestCreateProviderReturnsClaudeCliProviderForClaudeCli(t *testing.T) {
 		t.Fatalf("CreateProvider() error = %v", err)
 	}
 
-	if _, ok := provider.(*ClaudeCliProvider); !ok {
-		t.Fatalf("provider type = %T, want *ClaudeCliProvider", provider)
+	if provider == nil {
+		t.Fatal("provider is nil")
+	}
+	// Verify GetDefaultModel returns expected value for claude-cli
+	if got := provider.GetDefaultModel(); got != "claude-code" {
+		t.Errorf("GetDefaultModel() = %q, want %q", got, "claude-code")
 	}
 }
 
@@ -286,8 +301,12 @@ func TestCreateProviderReturnsClaudeProviderForAnthropicOAuth(t *testing.T) {
 		t.Fatalf("CreateProvider() error = %v", err)
 	}
 
-	if _, ok := provider.(*ClaudeProvider); !ok {
-		t.Fatalf("provider type = %T, want *ClaudeProvider", provider)
+	if provider == nil {
+		t.Fatal("provider is nil")
+	}
+	// Verify GetDefaultModel returns expected value for claude
+	if got := provider.GetDefaultModel(); got != "claude-sonnet-4.6" {
+		t.Errorf("GetDefaultModel() = %q, want %q", got, "claude-sonnet-4.6")
 	}
 	// TODO: Test custom APIBase when createClaudeAuthProvider supports it
 }

@@ -11,10 +11,10 @@ type Tool interface {
 }
 
 // ContextualTool is an optional interface that tools can implement
-// to receive the current message context (channel, chatID)
+// to receive the current message context (channel, chatID, sessionKey)
 type ContextualTool interface {
 	Tool
-	SetContext(channel, chatID string)
+	SetContext(channel, chatID, sessionKey string)
 }
 
 // AsyncCallback is a function type that async tools use to notify completion.

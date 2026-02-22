@@ -176,7 +176,7 @@ type clawhubModerationInfo struct {
 
 func (c *ClawHubRegistry) GetSkillMeta(ctx context.Context, slug string) (*SkillMeta, error) {
 	if err := utils.ValidateSkillIdentifier(slug); err != nil {
-		return nil, fmt.Errorf("invalid slug %q: error: %s", slug, err.Error())
+		return nil, fmt.Errorf("invalid slug %q: %w", slug, err)
 	}
 
 	u := c.baseURL + c.skillsPath + "/" + url.PathEscape(slug)
@@ -216,7 +216,7 @@ func (c *ClawHubRegistry) GetSkillMeta(ctx context.Context, slug string) (*Skill
 // Returns an InstallResult for the caller to use for moderation decisions.
 func (c *ClawHubRegistry) DownloadAndInstall(ctx context.Context, slug, version, targetDir string) (*InstallResult, error) {
 	if err := utils.ValidateSkillIdentifier(slug); err != nil {
-		return nil, fmt.Errorf("invalid slug %q: error: %s", slug, err.Error())
+		return nil, fmt.Errorf("invalid slug %q: %w", slug, err)
 	}
 
 	// Step 1: Fetch metadata (with fallback).

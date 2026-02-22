@@ -14,7 +14,7 @@ import (
 
 	"github.com/zhaopengme/mobaiclaw/pkg/auth"
 	"github.com/zhaopengme/mobaiclaw/pkg/config"
-	"github.com/zhaopengme/mobaiclaw/pkg/providers"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/antigravity"
 )
 
 const supportedProvidersMsg = "Supported providers: openai, anthropic, google-antigravity"
@@ -179,7 +179,7 @@ func authLoginGoogleAntigravity() {
 	}
 
 	// Fetch Cloud Code Assist project ID
-	projectID, err := providers.FetchAntigravityProjectID(cred.AccessToken)
+	projectID, err := antigravity.FetchProjectID(cred.AccessToken)
 	if err != nil {
 		fmt.Printf("Warning: could not fetch project ID: %v\n", err)
 		fmt.Println("You may need Google Cloud Code Assist enabled on your account.")
@@ -465,7 +465,7 @@ func authModelsCmd() {
 
 	fmt.Printf("Fetching models for project: %s\n\n", projectID)
 
-	models, err := providers.FetchAntigravityModels(cred.AccessToken, projectID)
+	models, err := antigravity.FetchModels(cred.AccessToken, projectID)
 	if err != nil {
 		fmt.Printf("Error fetching models: %v\n", err)
 		return

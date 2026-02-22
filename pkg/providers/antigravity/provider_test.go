@@ -1,16 +1,25 @@
-package providers
+// MobaiClaw - Ultra-lightweight personal AI agent
+// License: MIT
+//
+// Copyright (c) 2026 MobaiClaw contributors
 
-import "testing"
+package antigravity
+
+import (
+	"testing"
+
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/protocoltypes"
+)
 
 func TestBuildRequestUsesFunctionFieldsWhenToolCallNameMissing(t *testing.T) {
-	p := &AntigravityProvider{}
+	p := &Provider{}
 
-	messages := []Message{
+	messages := []protocoltypes.Message{
 		{
 			Role: "assistant",
-			ToolCalls: []ToolCall{{
+			ToolCalls: []protocoltypes.ToolCall{{
 				ID: "call_read_file_123",
-				Function: &FunctionCall{
+				Function: &protocoltypes.FunctionCall{
 					Name:      "read_file",
 					Arguments: `{"path":"README.md"}`,
 				},
@@ -52,5 +61,12 @@ func TestResolveToolResponseNameInfersNameFromGeneratedCallID(t *testing.T) {
 	got := resolveToolResponseName("call_search_docs_999", map[string]string{})
 	if got != "search_docs" {
 		t.Fatalf("expected inferred tool name search_docs, got %q", got)
+	}
+}
+
+func TestNewProvider_GetDefaultModel(t *testing.T) {
+	p := NewProvider()
+	if got := p.GetDefaultModel(); got != "gemini-3-flash" {
+		t.Errorf("GetDefaultModel() = %q, want %q", got, "gemini-3-flash")
 	}
 }

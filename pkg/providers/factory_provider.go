@@ -10,6 +10,13 @@ import (
 	"strings"
 
 	"github.com/zhaopengme/mobaiclaw/pkg/config"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/antigravity"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/claude"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/claude_cli"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/codex"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/codex_cli"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers/github_copilot"
+	httpprovider "github.com/zhaopengme/mobaiclaw/pkg/providers/http"
 )
 
 // createClaudeAuthProvider creates a Claude provider using OAuth credentials from auth store.
@@ -21,7 +28,7 @@ func createClaudeAuthProvider() (LLMProvider, error) {
 	if cred == nil {
 		return nil, fmt.Errorf("no credentials for anthropic. Run: mobaiclaw auth login --provider anthropic")
 	}
-	return NewClaudeProviderWithTokenSource(cred.AccessToken, createClaudeTokenSource()), nil
+	return claude.NewProviderWithTokenSource(cred.AccessToken, createClaudeTokenSource()), nil
 }
 
 // createCodexAuthProvider creates a Codex provider using OAuth credentials from auth store.
@@ -33,7 +40,7 @@ func createCodexAuthProvider() (LLMProvider, error) {
 	if cred == nil {
 		return nil, fmt.Errorf("no credentials for openai. Run: mobaiclaw auth login --provider openai")
 	}
-	return NewCodexProviderWithTokenSource(cred.AccessToken, cred.AccountID, createCodexTokenSource()), nil
+	return codex.NewProviderWithTokenSource(cred.AccessToken, cred.AccountID, createCodexTokenSource()), nil
 }
 
 // ExtractProtocol extracts the protocol prefix and model identifier from a model string.
@@ -84,7 +91,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		if apiBase == "" {
 			apiBase = getDefaultAPIBase(protocol)
 		}
-		return NewHTTPProviderWithMaxTokensField(cfg.APIKey, apiBase, cfg.Proxy, cfg.MaxTokensField), modelID, nil
+		return httpprovider.NewProviderWithMaxTokensField(cfg.APIKey, apiBase, cfg.Proxy, cfg.MaxTokensField), modelID, nil
 
 	case "openrouter", "groq", "zhipu", "gemini", "nvidia",
 		"ollama", "moonshot", "shengsuanyun", "deepseek", "cerebras",
@@ -97,7 +104,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		if apiBase == "" {
 			apiBase = getDefaultAPIBase(protocol)
 		}
-		return NewHTTPProviderWithMaxTokensField(cfg.APIKey, apiBase, cfg.Proxy, cfg.MaxTokensField), modelID, nil
+		return httpprovider.NewProviderWithMaxTokensField(cfg.APIKey, apiBase, cfg.Proxy, cfg.MaxTokensField), modelID, nil
 
 	case "anthropic":
 		if cfg.AuthMethod == "oauth" || cfg.AuthMethod == "token" {
@@ -116,24 +123,24 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		if cfg.APIKey == "" {
 			return nil, "", fmt.Errorf("api_key is required for anthropic protocol (model: %s)", cfg.Model)
 		}
-		return NewHTTPProviderWithMaxTokensField(cfg.APIKey, apiBase, cfg.Proxy, cfg.MaxTokensField), modelID, nil
+		return httpprovider.NewProviderWithMaxTokensField(cfg.APIKey, apiBase, cfg.Proxy, cfg.MaxTokensField), modelID, nil
 
 	case "antigravity":
-		return NewAntigravityProvider(), modelID, nil
+		return antigravity.NewProvider(), modelID, nil
 
 	case "claude-cli", "claudecli":
 		workspace := cfg.Workspace
 		if workspace == "" {
 			workspace = "."
 		}
-		return NewClaudeCliProvider(workspace), modelID, nil
+		return claude_cli.NewProvider(workspace), modelID, nil
 
 	case "codex-cli", "codexcli":
 		workspace := cfg.Workspace
 		if workspace == "" {
 			workspace = "."
 		}
-		return NewCodexCliProvider(workspace), modelID, nil
+		return codex_cli.NewProvider(workspace), modelID, nil
 
 	case "github-copilot", "copilot":
 		apiBase := cfg.APIBase
@@ -144,7 +151,7 @@ func CreateProviderFromConfig(cfg *config.ModelConfig) (LLMProvider, string, err
 		if connectMode == "" {
 			connectMode = "grpc"
 		}
-		provider, err := NewGitHubCopilotProvider(apiBase, connectMode, modelID)
+		provider, err := github_copilot.NewProvider(apiBase, connectMode, modelID)
 		if err != nil {
 			return nil, "", err
 		}

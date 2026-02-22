@@ -162,7 +162,7 @@ After completing the task, provide a clear summary of what was done.`
 		Tools:         tools,
 		MaxIterations: maxIter,
 		LLMOptions:    llmOptions,
-	}, messages, task.OriginChannel, task.OriginChatID)
+	}, messages, task.OriginChannel, task.OriginChatID, "")
 
 	sm.mu.Lock()
 	var result *ToolResult
@@ -275,7 +275,7 @@ func (t *SubagentTool) Parameters() map[string]interface{} {
 	}
 }
 
-func (t *SubagentTool) SetContext(channel, chatID string) {
+func (t *SubagentTool) SetContext(channel, chatID, sessionKey string) {
 	t.originChannel = channel
 	t.originChatID = chatID
 }
@@ -332,7 +332,7 @@ func (t *SubagentTool) Execute(ctx context.Context, args map[string]interface{})
 		Tools:         tools,
 		MaxIterations: maxIter,
 		LLMOptions:    llmOptions,
-	}, messages, t.originChannel, t.originChatID)
+	}, messages, t.originChannel, t.originChatID, "")
 	if err != nil {
 		return ErrorResult(fmt.Sprintf("Subagent execution failed: %v", err)).WithError(err)
 	}
