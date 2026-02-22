@@ -216,16 +216,23 @@ func (c *TelegramChannel) Send(ctx context.Context, msg bus.OutboundMessage) err
 			tgMsg.MessageThreadID = threadID
 		}
 
-		if _, err = c.bot.SendMessage(ctx, tgMsg); err != nil {
+		sentMsg, sendErr := c.bot.SendMessage(ctx, tgMsg)
+		if sendErr != nil {
 			logger.ErrorCF("telegram", "HTML parse failed or other error, falling back to plain text", map[string]interface{}{
-				"error":       err.Error(),
+				"error":       sendErr.Error(),
 				"chunk_index": i,
 			})
 			// HTML 解析失败时回退为纯文本再试一次
 			tgMsg.ParseMode = ""
-			if _, err = c.bot.SendMessage(ctx, tgMsg); err != nil {
-				lastErr = err // 记录最后一次错误，但继续尝试发送后续段落
+			sentMsg, sendErr = c.bot.SendMessage(ctx, tgMsg)
+			if sendErr != nil {
+				lastErr = sendErr // 记录最后一次错误，但继续尝试发送后续段落
 			}
+		}
+		// Status update 发送了新消息时，把它存为 placeholder，
+		// 这样后续的 status update 可以编辑它而不是再创建新消息。
+		if sendErr == nil && isStatusUpdate && sentMsg != nil && i == 0 {
+			c.placeholders.Store(msg.ChatID, sentMsg.MessageID)
 		}
 	}
 
