@@ -9,7 +9,7 @@ import (
 	"github.com/zhaopengme/mobaiclaw/pkg/bus"
 	"github.com/zhaopengme/mobaiclaw/pkg/channels"
 	"github.com/zhaopengme/mobaiclaw/pkg/providers"
-	"github.com/zhaopengme/mobaiclaw/pkg/session"
+	"github.com/zhaopengme/mobaiclaw/pkg/routing"
 )
 
 type CommandGateway struct {
@@ -17,16 +17,14 @@ type CommandGateway struct {
 	channelManager *channels.Manager
 	agentBus       bus.Broker           // for forwarding to agent
 	agentRegistry  *agent.AgentRegistry // to fetch models
-	sessions       *session.SessionManager
 }
 
-func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry, sessions *session.SessionManager) *CommandGateway {
+func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry) *CommandGateway {
 	return &CommandGateway{
 		bus:            b,
 		agentBus:       agentBus,
 		channelManager: cm,
 		agentRegistry:  registry,
-		sessions:       sessions,
 	}
 }
 
@@ -104,12 +102,28 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 /switch [model|channel] to <name> - Switch current model or channel`, true
 
 	case "/clear":
-		if g.sessions == nil {
+		if g.agentRegistry == nil {
+			return "agent registry not available", true
+		}
+		// Route to find the correct agent and session key
+		route := g.agentRegistry.ResolveRoute(routing.RouteInput{
+			Channel:   msg.Channel,
+			AccountID: msg.Metadata["account_id"],
+			Peer:      extractPeer(msg),
+			GuildID:   msg.Metadata["guild_id"],
+			TeamID:    msg.Metadata["team_id"],
+		})
+		agentInst, ok := g.agentRegistry.GetAgent(route.AgentID)
+		if !ok {
+			agentInst = g.agentRegistry.GetDefaultAgent()
+		}
+		if agentInst == nil || agentInst.Sessions == nil {
 			return "sessions not available", true
 		}
-		g.sessions.SetHistory(msg.SessionKey, []providers.Message{})
-		g.sessions.SetSummary(msg.SessionKey, "")
-		if err := g.sessions.Save(msg.SessionKey); err != nil {
+		sessionKey := route.SessionKey
+		agentInst.Sessions.SetHistory(sessionKey, []providers.Message{})
+		agentInst.Sessions.SetSummary(sessionKey, "")
+		if err := agentInst.Sessions.Save(sessionKey); err != nil {
 			return fmt.Sprintf("failed to save session: %v", err), true
 		}
 		return "🧹 当前会话已清空，我们可以重新开始了。", true
@@ -199,4 +213,21 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 	}
 
 	return "", false
+}
+
+// extractPeer extracts routing peer from inbound message metadata.
+func extractPeer(msg bus.InboundMessage) *routing.RoutePeer {
+	peerKind := msg.Metadata["peer_kind"]
+	if peerKind == "" {
+		return nil
+	}
+	peerID := msg.Metadata["peer_id"]
+	if peerID == "" {
+		if peerKind == "direct" {
+			peerID = msg.SenderID
+		} else {
+			peerID = msg.ChatID
+		}
+	}
+	return &routing.RoutePeer{Kind: peerKind, ID: peerID}
 }

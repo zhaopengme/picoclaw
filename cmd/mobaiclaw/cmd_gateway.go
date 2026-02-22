@@ -23,7 +23,6 @@ import (
 	"github.com/zhaopengme/mobaiclaw/pkg/heartbeat"
 	"github.com/zhaopengme/mobaiclaw/pkg/logger"
 	"github.com/zhaopengme/mobaiclaw/pkg/providers"
-	"github.com/zhaopengme/mobaiclaw/pkg/session"
 	"github.com/zhaopengme/mobaiclaw/pkg/state"
 	"github.com/zhaopengme/mobaiclaw/pkg/tools"
 	"github.com/zhaopengme/mobaiclaw/pkg/voice"
@@ -186,11 +185,7 @@ func gatewayCmd() {
 	}()
 	fmt.Printf("✓ Health endpoints available at http://%s:%d/health and /ready\n", cfg.Gateway.Host, cfg.Gateway.Port)
 
-	// Create shared SessionManager for gateway commands (e.g., /clear)
-	sessionsDir := filepath.Join(cfg.WorkspacePath(), "sessions")
-	sessionManager := session.NewSessionManager(sessionsDir)
-
-	gw := gateway.NewCommandGateway(mainBus, agentBus, channelManager, agentLoop.GetRegistry(), sessionManager)
+	gw := gateway.NewCommandGateway(mainBus, agentBus, channelManager, agentLoop.GetRegistry())
 	go gw.Run(ctx)
 
 	go agentLoop.Run(ctx)
