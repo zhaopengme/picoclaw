@@ -1043,14 +1043,15 @@ func (al *AgentLoop) summarizeSession(agent *AgentInstance, sessionKey string) {
 	}
 
 	if finalSummary != "" {
-		if _, ok := parseSummary(finalSummary); !ok {
-			logger.WarnCF("agent", "Summary is not valid JSON, discarding", map[string]interface{}{
+		if _, ok := parseSummary(finalSummary); ok {
+			agent.Sessions.SetSummary(sessionKey, finalSummary)
+		} else {
+			logger.WarnCF("agent", "Summary is not valid JSON, truncating history without saving summary", map[string]interface{}{
 				"session_key": sessionKey,
 				"preview":     finalSummary[:min(len(finalSummary), 100)],
 			})
-			return
 		}
-		agent.Sessions.SetSummary(sessionKey, finalSummary)
+		// Always truncate history to prevent repeated summarization cycles
 		agent.Sessions.TruncateHistory(sessionKey, 4)
 		agent.Sessions.Save(sessionKey)
 	}
