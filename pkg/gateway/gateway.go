@@ -8,6 +8,7 @@ import (
 	"github.com/zhaopengme/mobaiclaw/pkg/agent"
 	"github.com/zhaopengme/mobaiclaw/pkg/bus"
 	"github.com/zhaopengme/mobaiclaw/pkg/channels"
+	"github.com/zhaopengme/mobaiclaw/pkg/providers"
 	"github.com/zhaopengme/mobaiclaw/pkg/session"
 )
 
@@ -100,6 +101,17 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 /show [model|channel|agents] - Show current configuration
 /list [models|channels|agents] - List available options
 /switch [model|channel] to <name> - Switch current model or channel`, true
+
+	case "/clear":
+		if g.sessions == nil {
+			return "sessions not available", true
+		}
+		g.sessions.SetHistory(msg.SessionKey, []providers.Message{})
+		g.sessions.SetSummary(msg.SessionKey, "")
+		if err := g.sessions.Save(msg.SessionKey); err != nil {
+			return fmt.Sprintf("failed to save session: %v", err), true
+		}
+		return "🧹 当前会话已清空，我们可以重新开始了。", true
 
 	case "/show":
 		if len(args) < 1 {
