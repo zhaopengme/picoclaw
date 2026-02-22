@@ -134,6 +134,15 @@ func setupAgentTools(agentID string, agent *AgentInstance, cfg *config.Config, m
 	})
 	agent.Tools.Register(spawnTool)
 
+	// Register extra tools (e.g. CronTool) added via RegisterTool
+	extraToolsMu.Lock()
+	extras := make([]tools.Tool, len(extraTools))
+	copy(extras, extraTools)
+	extraToolsMu.Unlock()
+	for _, tool := range extras {
+		agent.Tools.Register(tool)
+	}
+
 	// Update context builder with the complete tools registry
 	agent.ContextBuilder.SetToolsRegistry(agent.Tools)
 }
@@ -199,7 +208,28 @@ func (al *AgentLoop) Stop() {
 	al.running.Store(false)
 }
 
+// RegisterTool registers a tool on all current agents and stores it
+// so that it is automatically re-registered after a config reload.
 func (al *AgentLoop) RegisterTool(tool tools.Tool) {
+	if tool == nil {
+		return
+	}
+
+	extraToolsMu.Lock()
+	name := tool.Name()
+	found := false
+	for i, t := range extraTools {
+		if t.Name() == name {
+			extraTools[i] = tool
+			found = true
+			break
+		}
+	}
+	if !found {
+		extraTools = append(extraTools, tool)
+	}
+	extraToolsMu.Unlock()
+
 	for _, agentID := range al.registry.ListAgentIDs() {
 		if agent, ok := al.registry.GetAgent(agentID); ok {
 			agent.Tools.Register(tool)

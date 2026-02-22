@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/zhaopengme/mobaiclaw/pkg/bus"
 	"github.com/zhaopengme/mobaiclaw/pkg/config"
@@ -150,6 +151,14 @@ func NewAgentInstance(
 type AgentSetupFunc func(agentID string, instance *AgentInstance, cfg *config.Config, msgBus bus.Broker, registry *AgentRegistry, provider providers.LLMProvider)
 
 var SetupAgentTools AgentSetupFunc = nil
+
+// extraTools holds tools registered externally (e.g. CronTool from cmd_gateway)
+// that need to survive registry reload. setupAgentTools registers these automatically.
+// Must only be accessed while holding extraToolsMu.
+var (
+	extraTools   []tools.Tool
+	extraToolsMu sync.Mutex
+)
 
 // resolveAgentWorkspace determines the workspace directory for an agent.
 func resolveAgentWorkspace(agentCfg *config.AgentConfig, defaults *config.AgentDefaults) string {
