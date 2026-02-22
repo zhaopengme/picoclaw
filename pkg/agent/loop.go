@@ -303,28 +303,6 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 			"matched_by":  route.MatchedBy,
 		})
 
-	// Intercept built-in commands
-	if strings.ToLower(strings.TrimSpace(msg.Content)) == "/clear" {
-		// Clear history and summary for the current session
-		agent.Sessions.SetHistory(sessionKey, []providers.Message{})
-		agent.Sessions.SetSummary(sessionKey, "")
-		agent.Sessions.Save(sessionKey)
-
-		// Return a confirmation message directly to the user
-		clearMsg := "🧹 当前会话已清空，我们可以重新开始了。"
-
-		// Optional: Log the action
-		logger.InfoCF("agent", "User cleared session history",
-			map[string]interface{}{
-				"agent_id":    agent.ID,
-				"session_key": sessionKey,
-				"channel":     msg.Channel,
-			})
-
-		// return directly without running LLM loop
-		return clearMsg, nil
-	}
-
 	return al.runAgentLoop(ctx, agent, processOptions{
 		SessionKey:      sessionKey,
 		Channel:         msg.Channel,
