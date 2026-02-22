@@ -12,19 +12,24 @@ import (
 	"github.com/zhaopengme/mobaiclaw/pkg/routing"
 )
 
+// ReloadCallback is the function signature for the /reload command handler.
+type ReloadCallback func(ctx context.Context, msg bus.InboundMessage) (string, error)
+
 type CommandGateway struct {
 	bus            bus.Broker
 	channelManager *channels.Manager
 	agentBus       bus.Broker           // for forwarding to agent
 	agentRegistry  *agent.AgentRegistry // to fetch models
+	reloadCallback ReloadCallback       // handler for /reload command
 }
 
-func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry) *CommandGateway {
+func NewCommandGateway(b bus.Broker, agentBus bus.Broker, cm *channels.Manager, registry *agent.AgentRegistry, reloadCb ReloadCallback) *CommandGateway {
 	return &CommandGateway{
 		bus:            b,
 		agentBus:       agentBus,
 		channelManager: cm,
 		agentRegistry:  registry,
+		reloadCallback: reloadCb,
 	}
 }
 
@@ -96,6 +101,7 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 	case "/help":
 		return `/start - Start the bot
 /clear - Clear current session history and summary
+/reload - Reload agent configuration (agents.*, bindings, providers). Note: Active conversations will be reset.
 /help - Show this help message
 /show [model|channel|agents] - Show current configuration
 /list [models|channels|agents] - List available options
@@ -127,6 +133,17 @@ func (g *CommandGateway) handleCommand(ctx context.Context, msg bus.InboundMessa
 			return fmt.Sprintf("failed to save session: %v", err), true
 		}
 		return "🧹 当前会话已清空，我们可以重新开始了。", true
+
+	case "/reload":
+		if g.reloadCallback == nil {
+			return "Reload not available", true
+		}
+		// Call reload callback
+		response, err := g.reloadCallback(ctx, msg)
+		if err != nil {
+			return fmt.Sprintf("Reload failed: %v", err), true
+		}
+		return response, true
 
 	case "/show":
 		if len(args) < 1 {

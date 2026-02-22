@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/zhaopengme/mobaiclaw/pkg/agent"
@@ -185,7 +186,8 @@ func gatewayCmd() {
 	}()
 	fmt.Printf("✓ Health endpoints available at http://%s:%d/health and /ready\n", cfg.Gateway.Host, cfg.Gateway.Port)
 
-	gw := gateway.NewCommandGateway(mainBus, agentBus, channelManager, agentLoop.GetRegistry())
+	reloadCallback := createReloadCallback(agentLoop, mainBus)
+	gw := gateway.NewCommandGateway(mainBus, agentBus, channelManager, agentLoop.GetRegistry(), reloadCallback)
 	go gw.Run(ctx)
 
 	go agentLoop.Run(ctx)
@@ -203,6 +205,53 @@ func gatewayCmd() {
 	agentLoop.Stop()
 	channelManager.StopAll(ctx)
 	fmt.Println("✓ Gateway stopped")
+}
+
+// createReloadCallback returns a function that handles /reload command.
+// It reloads config from disk, recreates the provider, and updates the agent registry.
+func createReloadCallback(agentLoop *agent.AgentLoop, msgBus bus.Broker) func(ctx context.Context, msg bus.InboundMessage) (string, error) {
+	return func(ctx context.Context, msg bus.InboundMessage) (string, error) {
+		// Load new config
+		newCfg, err := loadConfig()
+		if err != nil {
+			return fmt.Sprintf("Failed to load config: %v", err), nil
+		}
+
+		// Create new provider instance
+		newProvider, modelID, err := providers.CreateProvider(newCfg)
+		if err != nil {
+			return fmt.Sprintf("Failed to create provider: %v", err), nil
+		}
+		// Use the resolved model ID from provider creation
+		if modelID != "" {
+			newCfg.Agents.Defaults.Model = modelID
+		}
+
+		// Trigger registry reload with new provider and setup function
+		registry := agentLoop.GetRegistry()
+		if err := registry.Reload(newCfg, newProvider, msgBus, agentSetupFunc); err != nil {
+			return fmt.Sprintf("Failed to reload registry: %v", err), nil
+		}
+
+		// Update agentLoop's config reference
+		agentLoop.UpdateConfig(newCfg)
+		agentLoop.UpdateProvider(newProvider)
+
+		// Get new agent count
+		agentIDs := registry.ListAgentIDs()
+
+		return fmt.Sprintf("Config reloaded successfully. Provider: %s, %d agent(s) available: %s",
+			modelID, len(agentIDs), strings.Join(agentIDs, ", ")), nil
+	}
+}
+
+// agentSetupFunc wraps agent.SetupAgentTools for use in registry.Reload.
+func agentSetupFunc(agentID string, instance *agent.AgentInstance, cfg *config.Config, msgBus bus.Broker, registry *agent.AgentRegistry, provider providers.LLMProvider) {
+	if agent.SetupAgentTools == nil {
+		logger.ErrorC("reload", "SetupAgentTools not initialized - tools may not be registered")
+		return
+	}
+	agent.SetupAgentTools(agentID, instance, cfg, msgBus, registry, provider)
 }
 
 func setupCronTool(agentLoop *agent.AgentLoop, msgBus bus.Broker, workspace string, restrict bool, execTimeout time.Duration, cfg *config.Config) *cron.CronService {

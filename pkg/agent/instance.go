@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/zhaopengme/mobaiclaw/pkg/bus"
 	"github.com/zhaopengme/mobaiclaw/pkg/config"
 	"github.com/zhaopengme/mobaiclaw/pkg/providers"
 	"github.com/zhaopengme/mobaiclaw/pkg/routing"
@@ -142,6 +143,13 @@ func NewAgentInstance(
 		Candidates:     candidates,
 	}
 }
+
+// SetupAgentTools holds the function reference for tool registration.
+// It is set by the AgentLoop during initialization.
+// This function is defined in loop.go to avoid import cycles.
+type AgentSetupFunc func(agentID string, instance *AgentInstance, cfg *config.Config, msgBus bus.Broker, registry *AgentRegistry, provider providers.LLMProvider)
+
+var SetupAgentTools AgentSetupFunc = nil
 
 // resolveAgentWorkspace determines the workspace directory for an agent.
 func resolveAgentWorkspace(agentCfg *config.AgentConfig, defaults *config.AgentDefaults) string {

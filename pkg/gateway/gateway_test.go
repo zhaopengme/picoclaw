@@ -12,7 +12,7 @@ import (
 )
 
 func TestGatewayRoutesCommand(t *testing.T) {
-	g := NewCommandGateway(nil, nil, nil, nil)
+	g := NewCommandGateway(nil, nil, nil, nil, nil)
 	if g == nil {
 		t.Fatal("expected gateway")
 	}
@@ -144,5 +144,16 @@ func TestHelpCommandIncludesClear(t *testing.T) {
 	}
 	if !strings.Contains(resp, "/clear") {
 		t.Error("/help output should include /clear command")
+	}
+}
+
+func TestHelpCommandIncludesReload(t *testing.T) {
+	gw := &CommandGateway{}
+	resp, handled := gw.handleCommand(context.Background(), bus.InboundMessage{Content: "/help"})
+	if !handled {
+		t.Fatal("/help should be handled")
+	}
+	if !strings.Contains(resp, "/reload") {
+		t.Error("/help output should include /reload command")
 	}
 }
